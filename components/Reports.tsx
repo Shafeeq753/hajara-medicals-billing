@@ -33,29 +33,29 @@ const Reports: React.FC<ReportsProps> = ({ sales }) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-800">Reports</h2>
+      <h2 className="text-3xl font-bold text-gray-900">Reports</h2>
       
       <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
-        <h3 className="text-xl font-semibold text-gray-700 mb-4 p-2 md:p-0">Customer Outstanding Balances</h3>
+        <h3 className="text-xl font-semibold text-gray-900 mb-4 p-2 md:p-0">Customer Outstanding Balances</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left responsive-table">
             <thead>
               <tr className="bg-gray-50 border-b">
-                <th className="p-3 font-medium text-gray-600">Customer Name</th>
-                <th className="p-3 font-medium text-gray-600 text-right">Total Balance</th>
+                <th className="p-3 font-medium text-gray-800">Customer Name</th>
+                <th className="p-3 font-medium text-gray-800 text-right">Total Balance</th>
               </tr>
             </thead>
             <tbody>
               {balanceReports.length > 0 ? (
                 balanceReports.map(report => (
                   <tr key={report.customerId}>
-                    <td data-label="Customer" className="font-semibold text-gray-700">{report.customerName}</td>
+                    <td data-label="Customer" className="font-semibold text-gray-900">{report.customerName}</td>
                     <td data-label="Balance" className="text-red-600 font-bold text-right">₹{report.totalBalance.toFixed(2)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={2} className="p-4 text-center text-gray-500">No outstanding balances found.</td>
+                  <td colSpan={2} className="p-4 text-center text-gray-700">No outstanding balances found.</td>
                 </tr>
               )}
             </tbody>

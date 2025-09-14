@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { View } from '../App';
-import { DashboardIcon, SalesIcon, PurchasesIcon, CustomersIcon, ReportsIcon, MenuIcon, CloseIcon, ProductIcon, SupplierIcon } from './icons/Icons';
+import { DashboardIcon, SalesIcon, PurchasesIcon, CustomersIcon, ReportsIcon, MenuIcon, CloseIcon, ProductIcon, SupplierIcon, UserIcon, HistoryIcon, LogoutIcon } from './icons/Icons';
+import { User } from '../types';
 
 interface HeaderProps {
   activeView: View;
   setActiveView: (view: View) => void;
+  currentUser: User;
+  onLogout: () => void;
 }
 
 const NavItem: React.FC<{
@@ -19,7 +22,7 @@ const NavItem: React.FC<{
     className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
       activeView === view
         ? 'bg-blue-600 text-white shadow-md'
-        : 'text-gray-700 hover:bg-slate-100'
+        : 'text-gray-900 hover:bg-slate-100'
     }`}
   >
     {icon}
@@ -27,7 +30,7 @@ const NavItem: React.FC<{
   </button>
 );
 
-const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => {
+const Header: React.FC<HeaderProps> = ({ activeView, setActiveView, currentUser, onLogout }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleNavClick = (view: View) => {
@@ -38,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => {
   const navContent = (
     <>
       <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold text-gray-800">Pharma-Suite</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Hajara Medicals</h1>
       </div>
       <nav className="flex-1 px-4 space-y-2">
         <NavItem view="dashboard" label="Dashboard" icon={<DashboardIcon />} activeView={activeView} onClick={handleNavClick} />
@@ -48,7 +51,19 @@ const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => {
         <NavItem view="suppliers" label="Suppliers" icon={<SupplierIcon />} activeView={activeView} onClick={handleNavClick} />
         <NavItem view="customers" label="Customers" icon={<CustomersIcon />} activeView={activeView} onClick={handleNavClick} />
         <NavItem view="reports" label="Reports" icon={<ReportsIcon />} activeView={activeView} onClick={handleNavClick} />
+        <NavItem view="users" label="Users" icon={<UserIcon />} activeView={activeView} onClick={handleNavClick} />
+        <NavItem view="history" label="History Log" icon={<HistoryIcon />} activeView={activeView} onClick={handleNavClick} />
       </nav>
+      <div className="px-4 py-4 mt-auto border-t">
+        <div className="text-sm text-gray-900 mb-2">Logged in as: <span className="font-bold">{currentUser.name}</span></div>
+        <button
+          onClick={onLogout}
+          className="flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg text-red-600 hover:bg-red-50"
+        >
+          <LogoutIcon />
+          <span className="ml-3">Logout</span>
+        </button>
+      </div>
     </>
   );
 
@@ -56,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({ activeView, setActiveView }) => {
     <>
       {/* Mobile Header */}
       <div className="md:hidden flex justify-between items-center p-4 bg-white shadow-md">
-        <h1 className="text-xl font-bold text-gray-800">Pharma-Suite</h1>
+        <h1 className="text-xl font-bold text-gray-900">Hajara Medicals</h1>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
         </button>

@@ -4,8 +4,10 @@
     <meta charset="UTF--8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pharma-Suite: Billing & Inventory</title>
+    <title>Hajara Medicals: Billing & Inventory</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
   <script type="importmap">
 {
   "imports": {
@@ -16,13 +18,18 @@
 }
 </script>
 <style>
+  /* Ensure text in form inputs is black for readability */
+  input, select {
+    color: #000 !important;
+  }
+
   /* Fix for browser autofill background color */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
     -webkit-box-shadow: 0 0 0 30px white inset !important;
-    -webkit-text-fill-color: #1f2937 !important; /* gray-800 */
+    -webkit-text-fill-color: #000 !important;
     transition: background-color 5000s ease-in-out 0s;
   }
 
@@ -61,7 +68,7 @@
       white-space: nowrap;
       text-align: left;
       font-weight: 600;
-      color: #4b5563; /* gray-600 */
+      color: #111827; /* gray-900 */
     }
   }
 </style>

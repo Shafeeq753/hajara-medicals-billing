@@ -15,8 +15,8 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
       {icon}
     </div>
     <div>
-      <p className="text-sm font-medium text-gray-500">{title}</p>
-      <p className="text-2xl font-bold text-gray-800">{value}</p>
+      <p className="text-sm font-medium text-gray-700">{title}</p>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
     </div>
   </div>
 );
@@ -47,7 +47,7 @@ const SalesChart: React.FC<{ sales: Sale[] }> = ({ sales }) => {
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-xl font-semibold text-gray-700 mb-4">Sales (Last 7 Days)</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Sales (Last 7 Days)</h3>
             <div className="flex justify-around items-end h-64 border-l border-b border-gray-200 pl-4 pb-4">
                 {salesByDay.map((amount, index) => (
                     <div key={index} className="flex flex-col items-center w-1/8">
@@ -57,7 +57,7 @@ const SalesChart: React.FC<{ sales: Sale[] }> = ({ sales }) => {
                             style={{ height: `${(amount / maxSale) * 100}%` }}
                             title={`₹${amount.toFixed(2)}`}
                         ></div>
-                        <div className="mt-2 text-sm text-gray-500">{dayLabels[index]}</div>
+                        <div className="mt-2 text-sm text-gray-700">{dayLabels[index]}</div>
                     </div>
                 ))}
             </div>
@@ -89,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, customers, products }) => 
 
   return (
     <div className="space-y-8">
-      <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
+      <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
@@ -122,35 +122,35 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, customers, products }) => 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-6 rounded-xl shadow-lg">
-          <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><BoxIcon /> <span className="ml-2">Low Stock Items</span></h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center"><BoxIcon /> <span className="ml-2">Low Stock Items</span></h3>
           <div className="max-h-80 overflow-y-auto pr-2">
             <ul className="space-y-3">
               {lowStockProducts.length > 0 ? lowStockProducts.map(p => (
                 <li key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-semibold text-gray-800">{p.name}</p>
-                    <p className="text-sm text-gray-500">{p.manufacturer}</p>
+                    <p className="font-semibold text-gray-900">{p.name}</p>
+                    <p className="text-sm text-gray-700">{p.manufacturer}</p>
                   </div>
                   <span className="font-bold text-red-500 text-lg">{p.stock}</span>
                 </li>
-              )) : <p className="text-gray-500">No products are low on stock.</p>}
+              )) : <p className="text-gray-700">No products are low on stock.</p>}
             </ul>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-lg">
-          <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><CalendarIcon /> <span className="ml-2">Products Nearing Expiry (90 days)</span></h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center"><CalendarIcon /> <span className="ml-2">Products Nearing Expiry (90 days)</span></h3>
           <div className="max-h-80 overflow-y-auto pr-2">
             <ul className="space-y-3">
               {nearingExpiryProducts.length > 0 ? nearingExpiryProducts.map(p => (
                 <li key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                    <div>
-                    <p className="font-semibold text-gray-800">{p.name}</p>
-                    <p className="text-sm text-gray-500">Stock: {p.stock}</p>
+                    <p className="font-semibold text-gray-900">{p.name}</p>
+                    <p className="text-sm text-gray-700">Stock: {p.stock}</p>
                   </div>
                   <span className="font-semibold text-yellow-600">{new Date(p.expiryDate).toLocaleDateString()}</span>
                 </li>
-              )) : <p className="text-gray-500">No products nearing expiry.</p>}
+              )) : <p className="text-gray-700">No products nearing expiry.</p>}
             </ul>
           </div>
         </div>

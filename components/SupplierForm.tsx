@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Supplier } from '../types';
 
@@ -23,15 +24,15 @@ const SupplierForm: React.FC<SupplierFormProps> = ({ onSave, onCancel }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700">Name</label>
+        <label className="block text-sm font-medium text-gray-900">Name</label>
         <input type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Phone</label>
+        <label className="block text-sm font-medium text-gray-900">Phone</label>
         <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Address</label>
+        <label className="block text-sm font-medium text-gray-900">Address</label>
         <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
       </div>
       <div className="flex justify-end gap-2 pt-4">

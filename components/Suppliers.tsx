@@ -20,7 +20,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier }) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-gray-800">Suppliers</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Suppliers</h2>
         <button
           onClick={() => setIsModalOpen(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"
@@ -34,17 +34,17 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier }) => {
           <table className="w-full text-left responsive-table">
             <thead>
               <tr className="bg-gray-50 border-b">
-                <th className="p-3 font-medium text-gray-600">Name</th>
-                <th className="p-3 font-medium text-gray-600">Phone</th>
-                <th className="p-3 font-medium text-gray-600">Address</th>
+                <th className="p-3 font-medium text-gray-800">Name</th>
+                <th className="p-3 font-medium text-gray-800">Phone</th>
+                <th className="p-3 font-medium text-gray-800">Address</th>
               </tr>
             </thead>
             <tbody>
               {suppliers.map(supplier => (
                 <tr key={supplier.id}>
-                  <td data-label="Name" className="font-semibold text-gray-700">{supplier.name}</td>
-                  <td data-label="Phone" className="text-gray-700">{supplier.phone}</td>
-                  <td data-label="Address" className="text-gray-500">{supplier.address}</td>
+                  <td data-label="Name" className="font-semibold text-gray-900">{supplier.name}</td>
+                  <td data-label="Phone" className="text-gray-900">{supplier.phone}</td>
+                  <td data-label="Address" className="text-gray-700">{supplier.address}</td>
                 </tr>
               ))}
             </tbody>

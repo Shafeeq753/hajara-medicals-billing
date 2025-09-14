@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Product } from '../types';
 
@@ -31,27 +32,27 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSave, onCancel }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label className="block text-sm font-medium text-gray-700">Product Name</label>
+                <label className="block text-sm font-medium text-gray-900">Product Name</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700">Manufacturer</label>
+                <label className="block text-sm font-medium text-gray-900">Manufacturer</label>
                 <input type="text" value={manufacturer} onChange={e => setManufacturer(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
             </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700">Batch No.</label>
+                <label className="block text-sm font-medium text-gray-900">Batch No.</label>
                 <input type="text" value={batchNo} onChange={e => setBatchNo(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
             </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
+                <label className="block text-sm font-medium text-gray-900">Expiry Date</label>
                 <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
             </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700">Initial Stock</label>
+                <label className="block text-sm font-medium text-gray-900">Initial Stock</label>
                 <input type="number" value={stock} onChange={e => setStock(parseInt(e.target.value) || 0)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
             </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700">MRP (₹)</label>
+                <label className="block text-sm font-medium text-gray-900">MRP (₹)</label>
                 <input type="number" step="0.01" value={mrp} onChange={e => setMrp(parseFloat(e.target.value) || 0)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
             </div>
        </div>

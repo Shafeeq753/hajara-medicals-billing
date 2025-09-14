@@ -1,4 +1,18 @@
 
+export interface User {
+  id: string;
+  name: string;
+  password?: string; // Should be handled securely in a real app
+}
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  action: string;
+}
+
 export interface Customer {
   id: string;
   name: string;

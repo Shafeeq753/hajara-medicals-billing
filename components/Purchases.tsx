@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Purchase, Product, PurchaseItem, Supplier } from '../types';
 import { TrashIcon, PlusIcon } from './icons/Icons';
@@ -110,12 +111,12 @@ const Purchases: React.FC<PurchasesProps> = ({ onAddPurchase, products, supplier
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-gray-800">New Purchase</h2>
+      <h2 className="text-3xl font-bold text-gray-900">New Purchase</h2>
       <div className="bg-white p-6 rounded-xl shadow-lg">
         <form onSubmit={handleSavePurchase} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="supplierName" className="block text-sm font-medium text-gray-700">Supplier</label>
+              <label htmlFor="supplierName" className="block text-sm font-medium text-gray-900">Supplier</label>
               <div className="flex items-center gap-2 mt-1">
                  <select
                     id="supplierName"
@@ -133,7 +134,7 @@ const Purchases: React.FC<PurchasesProps> = ({ onAddPurchase, products, supplier
               </div>
             </div>
             <div className="relative">
-              <label htmlFor="productSearch" className="block text-sm font-medium text-gray-700">Search Product to Add</label>
+              <label htmlFor="productSearch" className="block text-sm font-medium text-gray-900">Search Product to Add</label>
               <input
                 id="productSearch"
                 type="text"
@@ -148,7 +149,7 @@ const Purchases: React.FC<PurchasesProps> = ({ onAddPurchase, products, supplier
                     <li
                       key={p.id}
                       onClick={() => addProductToPurchase(p)}
-                      className="p-2 hover:bg-blue-100 cursor-pointer"
+                      className="p-2 hover:bg-blue-100 cursor-pointer text-black"
                     >
                       {p.name} (Current Stock: {p.stock})
                     </li>
@@ -159,21 +160,21 @@ const Purchases: React.FC<PurchasesProps> = ({ onAddPurchase, products, supplier
           </div>
 
           <div className="overflow-x-auto border-t pt-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Purchase Items</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Purchase Items</h3>
             <table className="w-full text-left responsive-table">
               <thead>
                 <tr className="bg-gray-50 border-b">
-                  <th className="p-2 font-medium text-gray-600">Product</th>
-                  <th className="p-2 font-medium text-gray-600 text-center">Quantity</th>
-                  <th className="p-2 font-medium text-gray-600 text-right">Cost per Item</th>
-                  <th className="p-2 font-medium text-gray-600 text-right">Total</th>
+                  <th className="p-2 font-medium text-gray-800">Product</th>
+                  <th className="p-2 font-medium text-gray-800 text-center">Quantity</th>
+                  <th className="p-2 font-medium text-gray-800 text-right">Cost per Item</th>
+                  <th className="p-2 font-medium text-gray-800 text-right">Total</th>
                   <th className="p-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {currentItems.map(item => (
                   <tr key={item.productId}>
-                    <td data-label="Product" className="font-medium text-gray-800">{item.productName}</td>
+                    <td data-label="Product" className="font-medium text-gray-900">{item.productName}</td>
                     <td data-label="Quantity">
                       <input
                         type="number"
@@ -203,20 +204,20 @@ const Purchases: React.FC<PurchasesProps> = ({ onAddPurchase, products, supplier
                 ))}
                  {currentItems.length === 0 && (
                     <tr className="md:table-row">
-                        <td colSpan={5} className="text-center p-4 text-gray-500 block md:table-cell">No products added yet.</td>
+                        <td colSpan={5} className="text-center p-4 text-gray-700 block md:table-cell">No products added yet.</td>
                     </tr>
                  )}
               </tbody>
                <tfoot className="hidden md:table-footer-group">
                   <tr className="border-t">
-                    <td colSpan={3} className="p-2 text-right font-bold text-lg text-gray-700">Grand Total:</td>
+                    <td colSpan={3} className="p-2 text-right font-bold text-lg text-gray-900">Grand Total:</td>
                     <td className="p-2 text-right font-bold text-lg text-blue-600">₹{total.toFixed(2)}</td>
                     <td></td>
                   </tr>
                </tfoot>
             </table>
              <div className="md:hidden text-right mt-4 p-4 bg-gray-50 rounded-lg">
-                <span className="font-bold text-lg text-gray-700">Grand Total:</span>
+                <span className="font-bold text-lg text-gray-900">Grand Total:</span>
                 <span className="font-bold text-lg text-blue-600 ml-2">₹{total.toFixed(2)}</span>
             </div>
           </div>

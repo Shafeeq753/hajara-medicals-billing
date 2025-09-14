@@ -1,5 +1,9 @@
 
-import { Customer, Product, Sale, Purchase, Supplier } from '../types';
+import { Customer, Product, Sale, Purchase, Supplier, User } from '../types';
+
+export const DUMMY_USERS: User[] = [
+  { id: 'USER-001', name: 'thalif', password: 'thalif' },
+];
 
 export const DUMMY_PRODUCTS: Product[] = [
   { id: 'PROD-001', name: 'Paracetamol 500mg', manufacturer: 'Pharma Inc.', batchNo: 'PC500-1A', expiryDate: '2025-12-31', stock: 150, mrp: 25.50 },
