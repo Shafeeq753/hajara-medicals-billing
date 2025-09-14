@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF--8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pharma-Suite: Billing & Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/"
+  }
+}
+</script>
+<style>
+  /* Fix for browser autofill background color */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #1f2937 !important; /* gray-800 */
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  @media (max-width: 767px) {
+    .responsive-table thead {
+      display: none;
+    }
+    .responsive-table > tbody > tr {
+      display: block;
+      margin-bottom: 1rem;
+      border: 1px solid #e5e7eb; /* gray-200 */
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      padding: 1rem;
+      background-color: #fff;
+    }
+    .responsive-table > tbody > tr:hover {
+      background-color: #f9fafb; /* gray-50 */
+    }
+    .responsive-table td {
+      display: block;
+      text-align: right;
+      position: relative;
+      padding: 1rem;
+      padding-left: 50%;
+      border-bottom: 1px solid #f3f4f6; /* gray-100 */
+    }
+     .responsive-table > tbody > tr > td:last-child {
+      border-bottom: none;
+    }
+    .responsive-table td:before {
+      content: attr(data-label);
+      position: absolute;
+      left: 1rem;
+      width: calc(50% - 2rem);
+      white-space: nowrap;
+      text-align: left;
+      font-weight: 600;
+      color: #4b5563; /* gray-600 */
+    }
+  }
+</style>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
