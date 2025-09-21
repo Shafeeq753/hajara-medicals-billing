@@ -1,306 +1,118 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
-import { Customer, Product, Sale, SaleItem } from '../types';
+import React, { useState } from 'react';
+import { Sale } from '../types';
 import Modal from './Modal';
-import { PlusIcon, TrashIcon, PrintIcon } from './icons/Icons';
-import CustomerForm from './CustomerForm';
-import SaleReceipt from './SaleReceipt';
+import { PlusIcon, TrashIcon } from './icons/Icons';
 
-interface SalesProps {
-  customers: Customer[];
-  products: Product[];
-  sales: Sale[];
-  onAddSale: (sale: Sale) => void;
-  onAddCustomer: (customer: Omit<Customer, 'id'>) => void;
-}
+// New Sale Form component for the modal
+const SaleForm = ({ onSave, onCancel }: {
+  onSave: (sale: Omit<Sale, 'id'>) => void;
+  onCancel: () => void;
+}) => {
+  const [amount, setAmount] = useState('');
+  const [cashType, setCashType] = useState<'Cash' | 'Bank'>('Cash');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [savings, setSavings] = useState('');
 
-const Sales: React.FC<SalesProps> = ({ customers, products, sales, onAddSale, onAddCustomer }) => {
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [currentItems, setCurrentItems] = useState<SaleItem[]>([]);
-  const [discount, setDiscount] = useState<number>(0);
-  const [amountPaid, setAmountPaid] = useState<number>(0);
-  
-  const [productSearch, setProductSearch] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-
-  useEffect(() => {
-    if (productSearch.length > 1) {
-      setFilteredProducts(
-        products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()) && p.stock > 0)
-      );
-    } else {
-      setFilteredProducts([]);
-    }
-  }, [productSearch, products]);
-
-  const subtotal = useMemo(() => currentItems.reduce((sum, item) => sum + item.total, 0), [currentItems]);
-  const total = useMemo(() => subtotal - discount, [subtotal, discount]);
-  const balance = useMemo(() => total - amountPaid, [total, amountPaid]);
-
-  const addProductToSale = (product: Product) => {
-    const existingItem = currentItems.find(item => item.productId === product.id);
-    if (existingItem) {
-      if (existingItem.quantity < product.stock) {
-        updateItemQuantity(product.id, existingItem.quantity + 1);
-      } else {
-        alert("Cannot add more than available stock.");
-      }
-    } else {
-      if (product.stock > 0) {
-        const newItem: SaleItem = {
-          productId: product.id,
-          productName: product.name,
-          batchNo: product.batchNo,
-          quantity: 1,
-          mrp: product.mrp,
-          total: product.mrp,
-        };
-        setCurrentItems([...currentItems, newItem]);
-      } else {
-        alert("Product is out of stock.");
-      }
-    }
-    setProductSearch('');
-    setFilteredProducts([]);
-  };
-
-  const updateItemQuantity = (productId: string, quantity: number) => {
-    const product = products.find(p => p.id === productId);
-    if (product && quantity > product.stock) {
-      alert(`Only ${product.stock} items available in stock.`);
-      quantity = product.stock;
-    }
-
-    if(quantity <= 0) {
-        removeItem(productId);
-        return;
-    }
-
-    setCurrentItems(currentItems.map(item =>
-      item.productId === productId ? { ...item, quantity, total: item.mrp * quantity } : item
-    ));
-  };
-  
-  const removeItem = (productId: string) => {
-    setCurrentItems(currentItems.filter(item => item.productId !== productId));
-  };
-
-  const resetForm = () => {
-    setSelectedCustomerId(null);
-    setCurrentItems([]);
-    setDiscount(0);
-    setAmountPaid(0);
-    setProductSearch('');
-  }
-
-  const handleSaveSale = () => {
-    if (!selectedCustomerId) {
-      alert('Please select a customer.');
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || !date) {
+      alert('Amount and Date are required.');
       return;
     }
-    if (currentItems.length === 0) {
-      alert('Please add at least one product.');
-      return;
-    }
-
-    const customer = customers.find(c => c.id === selectedCustomerId);
-    if (!customer) {
-        alert('Invalid customer selected.');
-        return;
-    }
-
-    const newSale: Sale = {
-      id: `SALE-${Date.now()}`,
-      customerId: selectedCustomerId,
-      customerName: customer.name,
-      date: new Date().toISOString(),
-      items: currentItems,
-      subtotal,
-      discount,
-      total,
-      amountPaid,
-      balance,
-    };
-    onAddSale(newSale);
-    resetForm();
-  };
-  
-  const handleSaveCustomer = (customer: Omit<Customer, 'id'>) => {
-    onAddCustomer(customer);
-    setIsCustomerModalOpen(false);
-  };
-  
-  const handleViewReceipt = (sale: Sale) => {
-    setSelectedSale(sale);
-    setIsReceiptModalOpen(true);
+    onSave({
+      amount: parseFloat(amount),
+      cashType,
+      date,
+      savings: parseFloat(savings) || 0,
+    });
   };
 
   return (
-    <div className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">New Sale / Billing</h2>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Side: Bill Details */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-grow">
-                  <label className="block text-sm font-medium text-gray-900 mb-1">Customer</label>
-                  <select 
-                    value={selectedCustomerId || ''} 
-                    onChange={(e) => setSelectedCustomerId(e.target.value)} 
-                    className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="" disabled>Select a customer</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.name} - {c.phone}</option>)}
-                  </select>
-                </div>
-                <div className="self-end">
-                  <button 
-                    onClick={() => setIsCustomerModalOpen(true)}
-                    className="w-full sm:w-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 flex items-center justify-center"
-                  >
-                    <PlusIcon /> <span className="ml-2">New</span>
-                  </button>
-                </div>
-              </div>
+        <label className="block text-sm font-medium text-black">Amount (₹)</label>
+        <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-black">Cash Type</label>
+        <select value={cashType} onChange={e => setCashType(e.target.value as 'Cash' | 'Bank')} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+          <option value="Cash">Cash</option>
+          <option value="Bank">Bank</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-black">Date</label>
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-black">Savings (Optional, ₹)</label>
+        <input type="number" step="0.01" value={savings} onChange={e => setSavings(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+      </div>
+      <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+        <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-black rounded-md hover:bg-gray-300">Cancel</button>
+        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Save Sale</button>
+      </div>
+    </form>
+  );
+};
 
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-900 mb-1">Search Product</label>
-                <input
-                  type="text"
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  placeholder="Type to search products..."
-                  className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-                {filteredProducts.length > 0 && (
-                  <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">
-                    {filteredProducts.map(p => (
-                      <li 
-                        key={p.id} 
-                        onClick={() => addProductToSale(p)}
-                        className="p-2 hover:bg-blue-100 cursor-pointer text-black"
-                      >
-                        {p.name} (Stock: {p.stock}) - ₹{p.mrp}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-left responsive-table">
-                  <thead>
-                    <tr className="bg-gray-50 border-b">
-                      <th className="p-2 font-medium text-gray-800">Product</th>
-                      <th className="p-2 font-medium text-gray-800 text-center">Qty</th>
-                      <th className="p-2 font-medium text-gray-800 text-right">MRP</th>
-                      <th className="p-2 font-medium text-gray-800 text-right">Total</th>
-                      <th className="p-2 text-right"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentItems.map(item => (
-                      <tr key={item.productId}>
-                        <td data-label="Product" className="font-medium text-gray-900">{item.productName}</td>
-                        <td data-label="Qty">
-                          <input 
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => updateItemQuantity(item.productId, parseInt(e.target.value))}
-                            className="w-20 p-1 bg-white border border-gray-300 rounded-md text-center mx-auto md:ml-auto md:mr-0"
-                          />
-                        </td>
-                        <td data-label="MRP" className="text-right">₹{item.mrp.toFixed(2)}</td>
-                        <td data-label="Total" className="text-right font-semibold">₹{item.total.toFixed(2)}</td>
-                        <td data-label="Action" className="text-right">
-                          <button onClick={() => removeItem(item.productId)} className="text-red-500 hover:text-red-700 ml-auto block">
-                            <TrashIcon />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-          </div>
+// Main Sales component
+interface SalesProps {
+  sales: Sale[];
+  onAddSale: (sale: Omit<Sale, 'id'>) => void;
+  onDeleteSale: (saleId: string) => void;
+}
 
-          {/* Right Side: Summary & Payment */}
-          <div className="bg-white p-6 rounded-xl shadow-lg space-y-4 flex flex-col">
-              <h3 className="text-xl font-semibold border-b pb-2 text-gray-900">Bill Summary</h3>
-              <div className="flex justify-between items-center text-md">
-                <span className="font-medium text-gray-700">Subtotal:</span>
-                <span className="font-medium text-gray-900">₹{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                  <label className="text-md font-medium text-gray-900">Discount (₹):</label>
-                  <input 
-                    type="number"
-                    value={discount}
-                    onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                    className="w-28 p-2 bg-white border border-gray-300 rounded-md font-bold text-right"
-                  />
-              </div>
-              <div className="border-t my-2"></div>
-              <div className="flex justify-between items-center text-2xl">
-                <span className="font-bold text-gray-900">Total:</span>
-                <span className="font-extrabold text-blue-600">₹{total.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                  <label className="text-md font-medium text-gray-900">Paid Amount (₹):</label>
-                  <input 
-                    type="number"
-                    value={amountPaid}
-                    onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
-                    className="w-28 p-2 bg-white border border-gray-300 rounded-md font-bold text-right"
-                  />
-              </div>
-              <div className="flex justify-between items-center text-lg mt-2 p-3 rounded-md bg-yellow-100">
-                <span className="font-bold text-yellow-800">Balance:</span>
-                <span className="font-bold text-yellow-800">₹{balance.toFixed(2)}</span>
-              </div>
-              <div className="mt-auto pt-4">
-                <button 
-                  onClick={handleSaveSale}
-                  className="w-full bg-green-500 text-white py-3 rounded-lg text-lg font-bold hover:bg-green-600 transition-colors disabled:opacity-50"
-                  disabled={currentItems.length === 0 || !selectedCustomerId}
-                >
-                  Save Bill
-                </button>
-              </div>
-          </div>
-        </div>
+const Sales = ({ sales, onAddSale, onDeleteSale }: SalesProps) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleSaveSale = (sale: Omit<Sale, 'id'>) => {
+    onAddSale(sale);
+    setIsModalOpen(false);
+  };
+
+  const handleDeleteClick = (saleId: string) => {
+    if (window.confirm(`Are you sure you want to delete sale ${saleId}? This action cannot be undone.`)) {
+      onDeleteSale(saleId);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold text-black">Recent Sales</h2>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"
+        >
+          <PlusIcon /> Add Sales / Billing
+        </button>
       </div>
 
       <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4 p-2 md:p-0">Recent Sales</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-left responsive-table">
-            <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="p-3 font-medium text-gray-800">Sale ID</th>
-                <th className="p-3 font-medium text-gray-800">Customer</th>
-                <th className="p-3 font-medium text-gray-800">Date</th>
-                <th className="p-3 font-medium text-gray-800 text-right">Total</th>
-                <th className="p-3 font-medium text-gray-800 text-right">Balance</th>
-                <th className="p-3"></th>
+          <table className="w-full text-sm text-left responsive-table">
+            <thead className="text-xs text-black uppercase bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3">Sale ID</th>
+                <th scope="col" className="px-6 py-3">Date</th>
+                <th scope="col" className="px-6 py-3 text-right">Amount</th>
+                <th scope="col" className="px-6 py-3">Cash Type</th>
+                <th scope="col" className="px-6 py-3 text-right">Savings</th>
+                <th scope="col" className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sales.map(sale => (
-                <tr key={sale.id}>
-                  <td data-label="Sale ID" className="font-semibold text-gray-900">{sale.id}</td>
-                  <td data-label="Customer" className="text-gray-900">{sale.customerName}</td>
-                  <td data-label="Date" className="text-gray-700">{new Date(sale.date).toLocaleDateString()}</td>
-                  <td data-label="Total" className="font-semibold text-gray-900 text-right">₹{sale.total.toFixed(2)}</td>
-                  <td data-label="Balance" className={`font-bold text-right ${sale.balance > 0 ? 'text-red-500' : 'text-green-600'}`}>₹{sale.balance.toFixed(2)}</td>
-                  <td className="text-right">
-                    <button onClick={() => handleViewReceipt(sale)} className="text-blue-600 hover:underline flex items-center gap-1 justify-end p-2 rounded-md hover:bg-blue-50">
-                      <PrintIcon /> View/Print
+                <tr key={sale.id} className="bg-white border-b hover:bg-gray-50">
+                  <td data-label="Sale ID" className="px-6 py-4 font-medium text-black whitespace-nowrap">{sale.id}</td>
+                  <td data-label="Date" className="px-6 py-4">{new Date(sale.date).toLocaleDateString()}</td>
+                  <td data-label="Amount" className="px-6 py-4 font-semibold text-black text-right">₹{sale.amount.toFixed(2)}</td>
+                  <td data-label="Cash Type" className="px-6 py-4">{sale.cashType}</td>
+                  <td data-label="Savings" className="px-6 py-4 text-black text-right">₹{sale.savings.toFixed(2)}</td>
+                  <td data-label="Actions" className="px-6 py-4 text-right">
+                    <button onClick={() => handleDeleteClick(sale.id)} className="text-black hover:text-black">
+                      <TrashIcon />
                     </button>
                   </td>
                 </tr>
@@ -310,15 +122,9 @@ const Sales: React.FC<SalesProps> = ({ customers, products, sales, onAddSale, on
         </div>
       </div>
 
-      {isCustomerModalOpen && (
-        <Modal title="Add New Customer" onClose={() => setIsCustomerModalOpen(false)}>
-          <CustomerForm onSave={handleSaveCustomer} onCancel={() => setIsCustomerModalOpen(false)} />
-        </Modal>
-      )}
-
-      {isReceiptModalOpen && selectedSale && (
-        <Modal title="Sale Receipt" onClose={() => setIsReceiptModalOpen(false)}>
-          <SaleReceipt sale={selectedSale} />
+      {isModalOpen && (
+        <Modal title="Add New Sale / Billing" onClose={() => setIsModalOpen(false)}>
+          <SaleForm onSave={handleSaveSale} onCancel={() => setIsModalOpen(false)} />
         </Modal>
       )}
     </div>

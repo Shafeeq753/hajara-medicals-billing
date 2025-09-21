@@ -9,7 +9,7 @@ interface UsersProps {
   onAddUser: (user: Omit<User, 'id'>) => void;
 }
 
-const Users: React.FC<UsersProps> = ({ users, onAddUser }) => {
+const Users = ({ users, onAddUser }: UsersProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleSaveUser = (user: Omit<User, 'id'>) => {
@@ -20,7 +20,7 @@ const Users: React.FC<UsersProps> = ({ users, onAddUser }) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-gray-900">Users</h2>
+        <h2 className="text-3xl font-bold text-black">Users</h2>
         <button
           onClick={() => setIsModalOpen(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"
@@ -31,18 +31,18 @@ const Users: React.FC<UsersProps> = ({ users, onAddUser }) => {
 
       <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
         <div className="overflow-x-auto">
-          <table className="w-full text-left responsive-table">
-            <thead>
-              <tr className="bg-gray-50 border-b">
-                <th className="p-3 font-medium text-gray-800">Name</th>
-                <th className="p-3 font-medium text-gray-800">ID</th>
+          <table className="w-full text-sm text-left responsive-table">
+            <thead className="text-xs text-black uppercase bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3">Name</th>
+                <th scope="col" className="px-6 py-3">ID</th>
               </tr>
             </thead>
             <tbody>
               {users.map(user => (
-                <tr key={user.id}>
-                  <td data-label="Name" className="font-semibold text-gray-900">{user.name}</td>
-                  <td data-label="ID" className="text-gray-700">{user.id}</td>
+                <tr key={user.id} className="bg-white border-b hover:bg-gray-50">
+                  <td data-label="Name" className="px-6 py-4 font-medium text-black whitespace-nowrap">{user.name}</td>
+                  <td data-label="ID" className="px-6 py-4">{user.id}</td>
                 </tr>
               ))}
             </tbody>

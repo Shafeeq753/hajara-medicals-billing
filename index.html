@@ -13,14 +13,25 @@
   "imports": {
     "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "react": "https://aistudiocdn.com/react@^19.1.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/"
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.20.0"
   }
 }
 </script>
 <style>
-  /* Ensure text in form inputs is black for readability */
-  input, select {
-    color: #000 !important;
+  /* Global Black Text Override */
+  body, p, span, div, h1, h2, h3, h4, h5, h6, th, td, li, a, button, label, legend, input, select, textarea {
+    color: black !important;
+  }
+
+  /* Exceptions for Readability on Dark Backgrounds */
+  .bg-blue-600, .bg-blue-600 *,
+  .bg-blue-700, .bg-blue-700 *,
+  .bg-blue-500, .bg-blue-500 *,
+  .bg-green-500, .bg-green-500 *,
+  .bg-green-600, .bg-green-600 *,
+  .bg-red-500, .bg-red-500 * {
+    color: white !important;
   }
 
   /* Fix for browser autofill background color */
@@ -39,22 +50,21 @@
     }
     .responsive-table > tbody > tr {
       display: block;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
       border: 1px solid #e5e7eb; /* gray-200 */
-      border-radius: 0.5rem;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      padding: 1rem;
+      border-radius: 0.5rem; /* 8px */
       background-color: #fff;
+      padding: 0.75rem;
     }
-    .responsive-table > tbody > tr:hover {
-      background-color: #f9fafb; /* gray-50 */
+    .responsive-table > tbody > tr:last-child {
+        margin-bottom: 0;
     }
     .responsive-table td {
-      display: block;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       text-align: right;
-      position: relative;
-      padding: 1rem;
-      padding-left: 50%;
+      padding: 0.5rem 0;
       border-bottom: 1px solid #f3f4f6; /* gray-100 */
     }
      .responsive-table > tbody > tr > td:last-child {
@@ -62,13 +72,9 @@
     }
     .responsive-table td:before {
       content: attr(data-label);
-      position: absolute;
-      left: 1rem;
-      width: calc(50% - 2rem);
-      white-space: nowrap;
       text-align: left;
       font-weight: 600;
-      color: #111827; /* gray-900 */
+      color: #000;
     }
   }
 </style>

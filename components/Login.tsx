@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 interface LoginProps {
@@ -6,7 +5,7 @@ interface LoginProps {
   error: string | null;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
+const Login = ({ onLogin, error }: LoginProps) => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
 
@@ -41,7 +40,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
               required
             />
           </div>
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+          {error && <p className="text-sm text-black text-center">{error}</p>}
           <div>
             <button type="submit" className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors">
               Login

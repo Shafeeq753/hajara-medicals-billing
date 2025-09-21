@@ -1,4 +1,5 @@
 
+
 import { Customer, Product, Sale, Purchase, Supplier, User } from '../types';
 
 export const DUMMY_USERS: User[] = [
@@ -14,9 +15,9 @@ export const DUMMY_PRODUCTS: Product[] = [
 ];
 
 export const DUMMY_CUSTOMERS: Customer[] = [
-  { id: 'CUST-001', name: 'John Doe', phone: '555-0101', address: '123 Maple St' },
-  { id: 'CUST-002', name: 'Jane Smith', phone: '555-0102', address: '456 Oak Ave' },
-  { id: 'CUST-003', name: 'Peter Jones', phone: '555-0103', address: '789 Pine Ln' },
+  { id: 'CUST-001', name: 'John Doe', phone: '555-0101', address: '123 Maple St', usedProductIds: ['PROD-001', 'PROD-005'] },
+  { id: 'CUST-002', name: 'Jane Smith', phone: '555-0102', address: '456 Oak Ave', usedProductIds: ['PROD-002'] },
+  { id: 'CUST-003', name: 'Peter Jones', phone: '555-0103', address: '789 Pine Ln', usedProductIds: [] },
 ];
 
 export const DUMMY_SUPPLIERS: Supplier[] = [
@@ -28,32 +29,17 @@ export const DUMMY_SUPPLIERS: Supplier[] = [
 export const DUMMY_SALES: Sale[] = [
     {
         id: 'SALE-001',
-        customerId: 'CUST-001',
-        customerName: 'John Doe',
         date: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
-        items: [
-            { productId: 'PROD-001', productName: 'Paracetamol 500mg', batchNo: 'PC500-1A', quantity: 2, mrp: 25.50, total: 51.00 },
-            { productId: 'PROD-005', productName: 'Cough Syrup 100ml', batchNo: 'CS100-5E', quantity: 1, mrp: 90.00, total: 90.00 },
-        ],
-        subtotal: 141.00,
-        discount: 10.00,
-        total: 131.00,
-        amountPaid: 100.00,
-        balance: 31.00,
+        amount: 1500.00,
+        cashType: 'Cash',
+        savings: 150.00,
     },
     {
         id: 'SALE-002',
-        customerId: 'CUST-002',
-        customerName: 'Jane Smith',
         date: new Date().toISOString().split('T')[0], // Today
-        items: [
-            { productId: 'PROD-002', productName: 'Aspirin 75mg', batchNo: 'ASP75-2B', quantity: 3, mrp: 15.00, total: 45.00 },
-        ],
-        subtotal: 45.00,
-        discount: 0,
-        total: 45.00,
-        amountPaid: 45.00,
-        balance: 0.00,
+        amount: 2350.50,
+        cashType: 'Bank',
+        savings: 210.00,
     },
 ];
 
@@ -65,9 +51,11 @@ export const DUMMY_PURCHASES: Purchase[] = [
         supplierName: 'Pharma Distributors',
         date: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0], // 5 days ago
         items: [
-            { productId: 'PROD-001', productName: 'Paracetamol 500mg', quantity: 100, cost: 15.00, total: 1500.00 },
-            { productId: 'PROD-002', productName: 'Aspirin 75mg', quantity: 200, cost: 8.00, total: 1600.00 },
+            { productId: 'PROD-001', productName: 'Paracetamol 500mg', quantity: 100, cost: 15.00, total: 1500.00, batchNo: 'PC500-1A', expiryDate: '2025-12-31' },
+            { productId: 'PROD-002', productName: 'Aspirin 75mg', quantity: 200, cost: 8.00, total: 1600.00, batchNo: 'ASP75-2B', expiryDate: '2026-06-30' },
         ],
         total: 3100.00,
+        purchaseGst: 155.00,
+        salesGst: 155.00,
     }
 ];

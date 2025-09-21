@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   name: string;
@@ -18,6 +19,7 @@ export interface Customer {
   name: string;
   phone: string;
   address: string;
+  usedProductIds: string[];
 }
 
 export interface Supplier {
@@ -37,26 +39,12 @@ export interface Product {
   mrp: number;
 }
 
-export interface SaleItem {
-  productId: string;
-  productName: string;
-  batchNo: string;
-  quantity: number;
-  mrp: number;
-  total: number;
-}
-
 export interface Sale {
   id: string;
-  customerId: string;
-  customerName: string;
   date: string;
-  items: SaleItem[];
-  subtotal: number;
-  discount: number;
-  total: number;
-  amountPaid: number;
-  balance: number;
+  amount: number;
+  cashType: 'Cash' | 'Bank';
+  savings: number;
 }
 
 export interface PurchaseItem {
@@ -65,6 +53,8 @@ export interface PurchaseItem {
   quantity: number;
   cost: number;
   total: number;
+  batchNo: string;
+  expiryDate: string;
 }
 
 export interface Purchase {
@@ -74,4 +64,15 @@ export interface Purchase {
   date: string;
   items: PurchaseItem[];
   total: number;
+  purchaseGst: number;
+  salesGst: number;
 }
+
+// FIX: Add ChatMessage interface for Chatbot component.
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+  image?: string;
+}
+
+export type View = 'dashboard' | 'sales' | 'purchases' | 'customers' | 'products' | 'suppliers' | 'users' | 'history';
