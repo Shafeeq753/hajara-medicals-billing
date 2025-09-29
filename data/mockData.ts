@@ -7,11 +7,11 @@ export const DUMMY_USERS: User[] = [
 ];
 
 export const DUMMY_PRODUCTS: Product[] = [
-  { id: 'PROD-001', name: 'Paracetamol 500mg', manufacturer: 'Pharma Inc.', batchNo: 'PC500-1A', expiryDate: '2025-12-31', stock: 150, mrp: 25.50 },
-  { id: 'PROD-002', name: 'Aspirin 75mg', manufacturer: 'HealthCorp', batchNo: 'ASP75-2B', expiryDate: '2026-06-30', stock: 200, mrp: 15.00 },
-  { id: 'PROD-003', name: 'Amoxicillin 250mg', manufacturer: 'MediLife', batchNo: 'AMX250-3C', expiryDate: '2025-08-01', stock: 80, mrp: 75.00 },
-  { id: 'PROD-004', name: 'Vitamin C 1000mg', manufacturer: 'NutriWell', batchNo: 'VITC1K-4D', expiryDate: '2027-01-01', stock: 300, mrp: 120.75 },
-  { id: 'PROD-005', name: 'Cough Syrup 100ml', manufacturer: 'Pharma Inc.', batchNo: 'CS100-5E', expiryDate: '2025-10-20', stock: 120, mrp: 90.00 },
+  { id: 'PROD-001', name: 'Paracetamol 500mg', manufacturer: 'Pharma Inc.', batchNo: 'PC500-1A', shelfLocation: 'A1', expiryDate: '2025-12-31', stock: 150, mrp: 25.50 },
+  { id: 'PROD-002', name: 'Aspirin 75mg', manufacturer: 'HealthCorp', batchNo: 'ASP75-2B', shelfLocation: 'A2', expiryDate: '2026-06-30', stock: 200, mrp: 15.00 },
+  { id: 'PROD-003', name: 'Amoxicillin 250mg', manufacturer: 'MediLife', batchNo: 'AMX250-3C', shelfLocation: 'B1', expiryDate: '2025-08-01', stock: 80, mrp: 75.00 },
+  { id: 'PROD-004', name: 'Vitamin C 1000mg', manufacturer: 'NutriWell', batchNo: 'VITC1K-4D', shelfLocation: 'C3', expiryDate: '2027-01-01', stock: 300, mrp: 120.75 },
+  { id: 'PROD-005', name: 'Cough Syrup 100ml', manufacturer: 'Pharma Inc.', batchNo: 'CS100-5E', shelfLocation: 'A1', expiryDate: '2025-10-20', stock: 120, mrp: 90.00 },
 ];
 
 export const DUMMY_CUSTOMERS: Customer[] = [

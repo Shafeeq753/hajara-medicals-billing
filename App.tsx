@@ -148,7 +148,8 @@ const App = () => {
     setPurchases(prev => [newPurchase, ...prev]);
      // Update product stock, batch no, and expiry date
     setProducts(prevProducts => {
-      const productMap = new Map(prevProducts.map(p => [p.id, { ...p }]));
+      // FIX: Explicitly type productMap to resolve type inference issue.
+      const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
       newPurchase.items.forEach(item => {
           const product = productMap.get(item.productId);
           if (product) {
@@ -168,7 +169,8 @@ const App = () => {
 
     // Revert stock
     setProducts(prevProducts => {
-        const productMap = new Map(prevProducts.map(p => [p.id, { ...p }]));
+        // FIX: Explicitly type productMap to resolve type inference issue.
+        const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
         purchaseToDelete.items.forEach(item => {
             const product = productMap.get(item.productId);
             if (product) {

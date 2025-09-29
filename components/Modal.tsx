@@ -4,7 +4,8 @@ import { CloseIcon } from './icons/Icons';
 interface ModalProps {
   title: string;
   onClose: () => void;
-  children: React.ReactNode;
+  // FIX: Make children optional to resolve "Property 'children' is missing" errors across the app.
+  children?: React.ReactNode;
   size?: 'md' | 'lg' | 'xl';
 }
 

@@ -117,6 +117,7 @@ const Products = ({ products, purchases, onAddProduct, onUpdateProduct, onDelete
                 <th scope="col" className="px-6 py-3">Name</th>
                 <th scope="col" className="px-6 py-3">Manufacturer</th>
                 <th scope="col" className="px-6 py-3">Batch No.</th>
+                <th scope="col" className="px-6 py-3">Shelf</th>
                 <th scope="col" className="px-6 py-3">Expiry Date</th>
                 <th scope="col" className="px-6 py-3 text-right">Stock</th>
                 <th scope="col" className="px-6 py-3 text-right">MRP</th>
@@ -136,6 +137,7 @@ const Products = ({ products, purchases, onAddProduct, onUpdateProduct, onDelete
                   </td>
                   <td data-label="Manufacturer" className="px-6 py-4">{product.manufacturer}</td>
                   <td data-label="Batch No." className="px-6 py-4">{product.batchNo}</td>
+                  <td data-label="Shelf" className="px-6 py-4">{product.shelfLocation}</td>
                   <td data-label="Expiry" className="px-6 py-4">{product.expiryDate}</td>
                   <td data-label="Stock" className={`px-6 py-4 font-bold text-right text-black`}>
                     {product.stock}

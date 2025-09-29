@@ -11,6 +11,7 @@ const ProductForm = ({ onSave, onCancel, productToEdit }: ProductFormProps) => {
   const [name, setName] = useState('');
   const [manufacturer, setManufacturer] = useState('');
   const [batchNo, setBatchNo] = useState('');
+  const [shelfLocation, setShelfLocation] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [stock, setStock] = useState(0);
   const [mrp, setMrp] = useState(0);
@@ -20,6 +21,7 @@ const ProductForm = ({ onSave, onCancel, productToEdit }: ProductFormProps) => {
       setName(productToEdit.name);
       setManufacturer(productToEdit.manufacturer);
       setBatchNo(productToEdit.batchNo);
+      setShelfLocation(productToEdit.shelfLocation);
       setExpiryDate(productToEdit.expiryDate);
       setStock(productToEdit.stock);
       setMrp(productToEdit.mrp);
@@ -28,7 +30,7 @@ const ProductForm = ({ onSave, onCancel, productToEdit }: ProductFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !manufacturer || !batchNo || !expiryDate) {
+    if (!name || !manufacturer || !batchNo || !shelfLocation || !expiryDate) {
       alert("All fields are required.");
       return;
     }
@@ -36,7 +38,7 @@ const ProductForm = ({ onSave, onCancel, productToEdit }: ProductFormProps) => {
       alert("Stock and MRP cannot be negative.");
       return;
     }
-    const productData = { name, manufacturer, batchNo, expiryDate, stock, mrp };
+    const productData = { name, manufacturer, batchNo, shelfLocation, expiryDate, stock, mrp };
     if (productToEdit) {
       onSave({ ...productData, id: productToEdit.id });
     } else {
@@ -58,6 +60,10 @@ const ProductForm = ({ onSave, onCancel, productToEdit }: ProductFormProps) => {
              <div>
                 <label className="block text-sm font-medium text-black">Batch No.</label>
                 <input type="text" value={batchNo} onChange={e => setBatchNo(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
+            </div>
+             <div>
+                <label className="block text-sm font-medium text-black">Shelf Location</label>
+                <input type="text" value={shelfLocation} onChange={e => setShelfLocation(e.target.value)} placeholder="e.g. A1, B2" className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
             </div>
              <div>
                 <label className="block text-sm font-medium text-black">Expiry Date</label>

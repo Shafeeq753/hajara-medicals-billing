@@ -34,6 +34,7 @@ export interface Product {
   name: string;
   manufacturer: string;
   batchNo: string;
+  shelfLocation: string;
   expiryDate: string;
   stock: number;
   mrp: number;
