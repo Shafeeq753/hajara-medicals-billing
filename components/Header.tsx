@@ -38,7 +38,7 @@ const Header = ({ activeView, setActiveView, currentUser, onLogout }: HeaderProp
     setIsMobileMenuOpen(false);
   }
 
-  const isAccountsActive = ['accounts', 'sales', 'purchases', 'pendingPayments'].includes(activeView);
+  const isAccountsActive = ['accounts', 'sales', 'purchases', 'pendingPayments', 'billing'].includes(activeView);
 
   const navContent = (
     <>

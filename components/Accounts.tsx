@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from '../types';
-import { PurchasesIcon, SalesIcon, PendingPaymentsIcon } from './icons/Icons';
+import { PurchasesIcon, SalesIcon, PendingPaymentsIcon, BillingIcon } from './icons/Icons';
 
 interface AccountsProps {
   setActiveView: (view: View) => void;
@@ -40,6 +40,11 @@ const Accounts = ({ setActiveView }: AccountsProps) => {
           title="Pending Payments"
           icon={<PendingPaymentsIcon />}
           onClick={() => setActiveView('pendingPayments')}
+        />
+        <ActionCard
+          title="Billing"
+          icon={<BillingIcon />}
+          onClick={() => setActiveView('billing')}
         />
       </div>
     </div>

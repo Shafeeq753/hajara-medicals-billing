@@ -32,11 +32,18 @@ const PurchaseForm = ({
     let totalGst = 0;
 
     items.forEach(item => {
-        const itemAmount = item.quantity * item.rate;
-        const discountedAmount = itemAmount * (1 - (item.discount || 0) / 100);
+        const quantity = Number(item.quantity) || 0;
+        const rate = Number(item.rate) || 0;
+        const discount = Number(item.discount) || 0;
+        const cgst = Number(item.cgst) || 0;
+        const sgst = Number(item.sgst) || 0;
+        const igst = Number(item.igst) || 0;
+
+        const itemAmount = quantity * rate;
+        const discountedAmount = itemAmount * (1 - discount / 100);
         subTotal += discountedAmount;
         
-        const gstPercentage = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+        const gstPercentage = cgst + sgst + igst;
         totalGst += discountedAmount * (gstPercentage / 100);
     });
 
@@ -80,13 +87,7 @@ const PurchaseForm = ({
   const updateItem = (productId: string, field: keyof Omit<PurchaseItem, 'productId' | 'amount' | 'productName'>, value: string | number) => {
     setItems(prev => prev.map(item => {
         if (item.productId === productId) {
-            let processedValue = value;
-            if (typeof value === 'string') {
-                 if (['quantity', 'rate', 'mrp', 'discount', 'cgst', 'sgst', 'igst'].includes(field as string)) {
-                    processedValue = field === 'quantity' ? parseInt(value, 10) || 0 : parseFloat(value) || 0;
-                }
-            }
-            return { ...item, [field]: processedValue };
+            return { ...item, [field]: value };
         }
         return item;
     }));
@@ -136,11 +137,23 @@ const PurchaseForm = ({
 
     const finalItems: PurchaseItem[] = items.map(item => {
       const product = products.find(p => p.id === item.productId);
+      const quantity = Number(item.quantity) || 0;
+      const rate = Number(item.rate) || 0;
       return {
-        ...item,
+        productId: item.productId,
         productName: product?.name || 'Unknown',
-        amount: item.quantity * item.rate,
+        packaging: item.packaging,
+        hsnCode: item.hsnCode,
+        batchNo: item.batchNo,
         expiryDate: fromMMYYYYtoYYYYMMDD(item.expiryDate),
+        quantity: quantity,
+        rate: rate,
+        mrp: Number(item.mrp) || 0,
+        discount: Number(item.discount) || 0,
+        cgst: Number(item.cgst) || 0,
+        sgst: Number(item.sgst) || 0,
+        igst: Number(item.igst) || 0,
+        amount: quantity * rate,
       };
     });
     
@@ -235,7 +248,7 @@ const PurchaseForm = ({
                   <td className="p-1"><input type="text" value={item.packaging} onChange={e => updateItem(item.productId, 'packaging', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="number" min="1" value={item.quantity} onChange={e => updateItem(item.productId, 'quantity', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="number" min="0.01" step="0.01" value={item.rate} onChange={e => updateItem(item.productId, 'rate', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
-                  <td className="p-1 font-semibold">{(item.quantity * item.rate).toFixed(2)}</td>
+                  <td className="p-1 font-semibold">{((Number(item.quantity) || 0) * (Number(item.rate) || 0)).toFixed(2)}</td>
                   <td className="p-1"><input type="number" min="0" step="0.01" value={item.mrp} onChange={e => updateItem(item.productId, 'mrp', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="number" min="0" step="0.01" value={item.discount} onChange={e => updateItem(item.productId, 'discount', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="text" value={item.hsnCode} onChange={e => updateItem(item.productId, 'hsnCode', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>

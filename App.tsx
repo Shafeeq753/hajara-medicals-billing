@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord } from './types';
+import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill } from './types';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Sales from './components/Sales';
@@ -12,6 +12,7 @@ import HistoryLog from './components/HistoryLog';
 import Login from './components/Login';
 import Accounts from './components/Accounts';
 import PendingPayments from './components/PendingPayments';
+import Billing from './components/Billing';
 import { DUMMY_CUSTOMERS, DUMMY_PRODUCTS, DUMMY_SALES, DUMMY_PURCHASES, DUMMY_SUPPLIERS, DUMMY_USERS } from './data/mockData';
 
 const App = () => {
@@ -28,6 +29,7 @@ const App = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>(DUMMY_SUPPLIERS);
   const [users, setUsers] = useState<User[]>(() => JSON.parse(JSON.stringify(DUMMY_USERS)));
   const [historyLog, setHistoryLog] = useState<LogEntry[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
 
 
   const addLogEntry = (action: string) => {
@@ -207,6 +209,28 @@ const App = () => {
     }));
   };
 
+  // Bill Handlers
+  const handleAddBill = (bill: Omit<Bill, 'id'>) => {
+    const newBill: Bill = {
+      ...bill,
+      id: `BILL-${Date.now()}`,
+    };
+    setBills(prev => [newBill, ...prev]);
+
+    // Update product stock
+    setProducts(prevProducts => {
+      const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
+      newBill.items.forEach(item => {
+          const product = productMap.get(item.productId);
+          if (product) {
+              product.stock -= item.quantity;
+          }
+      });
+      return Array.from(productMap.values());
+    });
+    addLogEntry(`Created bill ${newBill.id} for ${newBill.patientName} (Total: ₹${newBill.grandTotal.toFixed(2)})`);
+  };
+
   const stockAmount = useMemo(() => {
     const totalSaleSavings = sales.reduce((sum, sale) => sum + sale.savings, 0);
     const totalPurchasePayments = purchases.reduce((sum, purchase) => {
@@ -225,6 +249,8 @@ const App = () => {
         return <Dashboard sales={sales} customers={customers} products={products} purchases={purchases} />;
       case 'accounts':
         return <Accounts setActiveView={setActiveView} />;
+      case 'billing':
+        return <Billing bills={bills} products={products} onAddBill={handleAddBill} />;
       case 'sales':
         return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} />;
       case 'purchases':

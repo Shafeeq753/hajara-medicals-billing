@@ -86,6 +86,30 @@ export interface Purchase {
   paymentHistory: PaymentRecord[];
 }
 
+export interface BillItem {
+  serialNumber: number;
+  productId: string;
+  productName: string;
+  expiryDate: string;
+  quantity: number;
+  packaging: string;
+  mrp: number;
+  discount: number; // percentage
+  total: number;
+}
+
+export interface Bill {
+  id: string;
+  patientName: string;
+  doctorName: string;
+  billNumber: string;
+  date: string;
+  items: BillItem[];
+  subTotal: number;
+  overallDiscount: number; // in amount
+  roundOff: number;
+  grandTotal: number;
+}
 
 export interface ChatMessage {
   role: 'user' | 'model';
@@ -93,4 +117,4 @@ export interface ChatMessage {
   image?: string;
 }
 
-export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'customers' | 'products' | 'suppliers' | 'users' | 'history' | 'pendingPayments';
+export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'customers' | 'products' | 'suppliers' | 'users' | 'history' | 'pendingPayments' | 'billing';
