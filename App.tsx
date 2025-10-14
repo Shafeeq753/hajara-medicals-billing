@@ -1,5 +1,6 @@
 
 
+
 import React, { useState } from 'react';
 import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View } from './types';
 import Header from './components/Header';
@@ -146,16 +147,14 @@ const App = () => {
   const handleAddPurchase = (purchase: Omit<Purchase, 'id'>) => {
     const newPurchase = { ...purchase, id: `PUR-${Date.now()}` };
     setPurchases(prev => [newPurchase, ...prev]);
-     // Update product stock, batch no, and expiry date
+     // Update product stock and MRP
     setProducts(prevProducts => {
-      // FIX: Explicitly type productMap to resolve type inference issue.
       const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
       newPurchase.items.forEach(item => {
           const product = productMap.get(item.productId);
           if (product) {
               product.stock += item.quantity;
-              product.batchNo = item.batchNo;
-              product.expiryDate = item.expiryDate;
+              product.mrp = item.mrp;
           }
       });
       return Array.from(productMap.values());
@@ -169,7 +168,6 @@ const App = () => {
 
     // Revert stock
     setProducts(prevProducts => {
-        // FIX: Explicitly type productMap to resolve type inference issue.
         const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
         purchaseToDelete.items.forEach(item => {
             const product = productMap.get(item.productId);
@@ -187,7 +185,7 @@ const App = () => {
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard sales={sales} customers={customers} products={products} />;
+        return <Dashboard sales={sales} customers={customers} products={products} purchases={purchases} />;
       case 'sales':
         return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} />;
       case 'purchases':
@@ -195,7 +193,7 @@ const App = () => {
       case 'customers':
         return <Customers customers={customers} onAddCustomer={handleAddCustomer} products={products} onUpdateCustomerMedicines={handleUpdateCustomerMedicines} />;
       case 'suppliers':
-        return <Suppliers suppliers={suppliers} onAddSupplier={handleAddSupplier} onUpdateSupplier={handleUpdateSupplier} onDeleteSupplier={handleDeleteSupplier} />;
+        return <Suppliers suppliers={suppliers} purchases={purchases} onAddSupplier={handleAddSupplier} onUpdateSupplier={handleUpdateSupplier} onDeleteSupplier={handleDeleteSupplier} />;
       case 'products':
         return <Products products={products} purchases={purchases} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct} />;
       case 'users':
@@ -203,7 +201,7 @@ const App = () => {
       case 'history':
         return <HistoryLog logs={historyLog} />;
       default:
-        return <Dashboard sales={sales} customers={customers} products={products} />;
+        return <Dashboard sales={sales} customers={customers} products={products} purchases={purchases} />;
     }
   };
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Purchase, Product, PurchaseItem, Supplier } from '../types';
 import { TrashIcon, PlusIcon } from './icons/Icons';
@@ -18,38 +17,98 @@ const PurchaseForm = ({
 }) => {
   const [supplierId, setSupplierId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [items, setItems] = useState<Omit<PurchaseItem, 'total' | 'productName'>[]>([]);
-  const [purchaseGst, setPurchaseGst] = useState(0);
-  const [salesGst, setSalesGst] = useState(0);
-  const [productSearch, setProductSearch] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'Credit' | 'Cash' | 'Bank Transfer'>('Credit');
+  const [items, setItems] = useState<Omit<PurchaseItem, 'amount' | 'productName'>[]>([]);
+  const [selectedProductIdToAdd, setSelectedProductIdToAdd] = useState('');
+  const [roundOff, setRoundOff] = useState('0');
 
-  const filteredProducts = useMemo(() => {
-    if (productSearch.length < 2) return [];
+  const availableProducts = useMemo(() => {
     const addedProductIds = items.map(item => item.productId);
-    return products.filter(
-      p => p.name.toLowerCase().includes(productSearch.toLowerCase()) && !addedProductIds.includes(p.id)
-    );
-  }, [productSearch, products, items]);
+    return products.filter(p => !addedProductIds.includes(p.id));
+  }, [products, items]);
 
-  const grandTotal = useMemo(() => items.reduce((sum, item) => sum + item.quantity * item.cost, 0), [items]);
+  const { subTotal, totalGst, grandTotal, netAmount } = useMemo(() => {
+    let subTotal = 0;
+    let totalGst = 0;
+
+    items.forEach(item => {
+        const itemAmount = item.quantity * item.rate;
+        const discountedAmount = itemAmount * (1 - (item.discount || 0) / 100);
+        subTotal += discountedAmount;
+        
+        const gstPercentage = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+        totalGst += discountedAmount * (gstPercentage / 100);
+    });
+
+    const grandTotal = subTotal + totalGst;
+    const roundOffValue = parseFloat(roundOff) || 0;
+    const netAmount = grandTotal + roundOffValue;
+    
+    return {
+        subTotal,
+        totalGst,
+        grandTotal,
+        netAmount,
+    };
+}, [items, roundOff]);
 
   const addProductToPurchase = (product: Product) => {
     setItems(prev => [...prev, {
       productId: product.id,
       quantity: 1,
-      cost: 0,
+      packaging: '',
+      rate: 0,
+      mrp: product.mrp || 0,
+      discount: 0,
+      hsnCode: '',
+      cgst: 0,
+      sgst: 0,
+      igst: 0,
       batchNo: '',
       expiryDate: '',
     }]);
-    setProductSearch('');
   };
 
-  const updateItem = (productId: string, field: keyof Omit<PurchaseItem, 'productId' | 'total' | 'productName'>, value: string | number) => {
-    setItems(prev => prev.map(item => 
-      item.productId === productId ? { ...item, [field]: value } : item
-    ));
+  const handleAddProductClick = () => {
+    const productToAdd = products.find(p => p.id === selectedProductIdToAdd);
+    if (productToAdd) {
+        addProductToPurchase(productToAdd);
+        setSelectedProductIdToAdd(''); // Reset dropdown
+    }
+  };
+
+  const updateItem = (productId: string, field: keyof Omit<PurchaseItem, 'productId' | 'amount' | 'productName'>, value: string | number) => {
+    setItems(prev => prev.map(item => {
+        if (item.productId === productId) {
+            let processedValue = value;
+            if (typeof value === 'string') {
+                 // FIX: Cast `field` to string to satisfy `includes` method type requirement.
+                 if (['quantity', 'rate', 'mrp', 'discount', 'cgst', 'sgst', 'igst'].includes(field as string)) {
+                    processedValue = field === 'quantity' ? parseInt(value, 10) || 0 : parseFloat(value) || 0;
+                }
+            }
+            return { ...item, [field]: processedValue };
+        }
+        return item;
+    }));
   };
   
+  const handleGstChange = (productId: string, gstValue: string) => {
+    const gst = parseFloat(gstValue) || 0;
+    const halfGst = gst / 2;
+    setItems(prev => prev.map(item => {
+        if (item.productId === productId) {
+            return {
+                ...item,
+                cgst: halfGst,
+                sgst: halfGst,
+                igst: 0,
+            };
+        }
+        return item;
+    }));
+  };
+
   const removeItem = (productId: string) => {
     setItems(prev => prev.filter(item => item.productId !== productId));
   };
@@ -60,37 +119,48 @@ const PurchaseForm = ({
       alert('Please select a supplier and add at least one product.');
       return;
     }
-     if (items.some(i => !i.batchNo || !i.expiryDate || i.quantity <= 0 || i.cost <= 0)) {
-        alert('Please fill all details (quantity, cost, batch no, expiry date) for each product.');
+
+    const isValidExpiry = (dateStr: string) => /^\d{2}\/\d{4}$/.test(dateStr.trim());
+    if (items.some(i => !i.batchNo || !isValidExpiry(i.expiryDate) || i.quantity <= 0 || i.rate <= 0)) {
+        alert('Please fill all required details (quantity, rate, batch no, and expiry date in MM/YYYY format) for each product.');
         return;
     }
 
     const supplier = suppliers.find(s => s.id === supplierId);
     if (!supplier) return;
 
+    const fromMMYYYYtoYYYYMMDD = (mmYYYY: string) => {
+        const [month, year] = mmYYYY.split('/');
+        const lastDay = new Date(parseInt(year), parseInt(month, 10), 0).getDate();
+        return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    };
+
     const finalItems: PurchaseItem[] = items.map(item => {
       const product = products.find(p => p.id === item.productId);
       return {
         ...item,
         productName: product?.name || 'Unknown',
-        total: item.quantity * item.cost,
+        amount: item.quantity * item.rate,
+        expiryDate: fromMMYYYYtoYYYYMMDD(item.expiryDate),
       };
     });
+    
+    const finalRoundOff = parseFloat(roundOff) || 0;
 
     onSave({
       supplierId,
       supplierName: supplier.name,
       date,
+      paymentMethod,
       items: finalItems,
-      total: grandTotal,
-      purchaseGst,
-      salesGst,
+      roundOff: finalRoundOff,
+      total: netAmount,
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium">Supplier</label>
           <select value={supplierId} onChange={e => setSupplierId(e.target.value)} className="mt-1 w-full p-2 bg-white border rounded-md" required>
@@ -102,37 +172,58 @@ const PurchaseForm = ({
           <label className="block text-sm font-medium">Order Date</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1 w-full p-2 bg-white border rounded-md" required />
         </div>
+        <div>
+            <label className="block text-sm font-medium">Payment Method</label>
+            <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)} className="mt-1 w-full p-2 bg-white border rounded-md" required>
+                <option value="Credit">Credit</option>
+                <option value="Cash">Cash</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+        </div>
       </div>
 
-      <div className="relative border-t pt-4">
+      <div className="border-t pt-4">
         <label className="block text-sm font-medium">Add Product</label>
-        <input
-          type="text"
-          value={productSearch}
-          onChange={e => setProductSearch(e.target.value)}
-          placeholder="Type to search products..."
-          className="mt-1 w-full p-2 bg-white border rounded-md"
-        />
-        {filteredProducts.length > 0 && (
-          <ul className="absolute z-20 w-full bg-white border rounded-md mt-1 max-h-48 overflow-y-auto shadow-lg">
-            {filteredProducts.map(p => (
-              <li key={p.id} onClick={() => addProductToPurchase(p)} className="p-2 hover:bg-blue-100 cursor-pointer">
-                {p.name}
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="flex items-center gap-2">
+            <select
+                value={selectedProductIdToAdd}
+                onChange={e => setSelectedProductIdToAdd(e.target.value)}
+                className="mt-1 w-full p-2 bg-white border rounded-md"
+            >
+                <option value="" disabled>Select a product to add</option>
+                {availableProducts.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+            </select>
+            <button
+                type="button"
+                onClick={handleAddProductClick}
+                disabled={!selectedProductIdToAdd}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400 mt-1 flex-shrink-0"
+            >
+                Add
+            </button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto max-h-[30vh]">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto max-h-[40vh] border-t border-b py-2">
+        <table className="w-full text-xs min-w-[1300px]">
           <thead>
             <tr className="border-b">
               <th className="p-2 text-left">Product</th>
+              <th className="p-2 text-left">Pkg</th>
               <th className="p-2 text-left">Qty</th>
-              <th className="p-2 text-left">Cost</th>
-              <th className="p-2 text-left">Batch No.</th>
+              <th className="p-2 text-left">Rate</th>
+              <th className="p-2 text-left">Amount</th>
+              <th className="p-2 text-left">MRP</th>
+              <th className="p-2 text-left">Disc%</th>
+              <th className="p-2 text-left">HSN</th>
+              <th className="p-2 text-left">Batch</th>
               <th className="p-2 text-left">Expiry</th>
+              <th className="p-2 text-left">GST%</th>
+              <th className="p-2 text-left">CGST%</th>
+              <th className="p-2 text-left">SGST%</th>
+              <th className="p-2 text-left">IGST%</th>
               <th className="p-2"></th>
             </tr>
           </thead>
@@ -141,11 +232,20 @@ const PurchaseForm = ({
               const product = products.find(p => p.id === item.productId);
               return (
                 <tr key={item.productId} className="border-b">
-                  <td className="p-1 font-medium">{product?.name}</td>
-                  <td className="p-1"><input type="number" min="1" value={item.quantity} onChange={e => updateItem(item.productId, 'quantity', parseInt(e.target.value) || 1)} className="w-20 p-1 border rounded-md" /></td>
-                  <td className="p-1"><input type="number" min="0.01" step="0.01" value={item.cost} onChange={e => updateItem(item.productId, 'cost', parseFloat(e.target.value) || 0)} className="w-24 p-1 border rounded-md" /></td>
-                  <td className="p-1"><input type="text" value={item.batchNo} onChange={e => updateItem(item.productId, 'batchNo', e.target.value)} className="w-28 p-1 border rounded-md" /></td>
-                  <td className="p-1"><input type="date" value={item.expiryDate} onChange={e => updateItem(item.productId, 'expiryDate', e.target.value)} className="w-36 p-1 border rounded-md" /></td>
+                  <td className="p-1 font-medium whitespace-nowrap">{product?.name}</td>
+                  <td className="p-1"><input type="text" value={item.packaging} onChange={e => updateItem(item.productId, 'packaging', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="number" min="1" value={item.quantity} onChange={e => updateItem(item.productId, 'quantity', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="number" min="0.01" step="0.01" value={item.rate} onChange={e => updateItem(item.productId, 'rate', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1 font-semibold">{(item.quantity * item.rate).toFixed(2)}</td>
+                  <td className="p-1"><input type="number" min="0" step="0.01" value={item.mrp} onChange={e => updateItem(item.productId, 'mrp', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="number" min="0" step="0.01" value={item.discount} onChange={e => updateItem(item.productId, 'discount', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="text" value={item.hsnCode} onChange={e => updateItem(item.productId, 'hsnCode', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="text" value={item.batchNo} onChange={e => updateItem(item.productId, 'batchNo', e.target.value)} className="w-24 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="text" placeholder="MM/YYYY" value={item.expiryDate} onChange={e => updateItem(item.productId, 'expiryDate', e.target.value)} className="w-24 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="number" min="0" step="0.01" placeholder="e.g. 12" onChange={e => handleGstChange(item.productId, e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="number" min="0" step="0.01" value={item.cgst} onChange={e => updateItem(item.productId, 'cgst', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="number" min="0" step="0.01" value={item.sgst} onChange={e => updateItem(item.productId, 'sgst', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="number" min="0" step="0.01" value={item.igst} onChange={e => updateItem(item.productId, 'igst', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1 text-right"><button type="button" onClick={() => removeItem(item.productId)}><TrashIcon /></button></td>
                 </tr>
               )
@@ -154,17 +254,29 @@ const PurchaseForm = ({
         </table>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
-        <div>
-          <label className="block text-sm font-medium">Purchase GST (₹)</label>
-          <input type="number" step="0.01" value={purchaseGst} onChange={e => setPurchaseGst(parseFloat(e.target.value) || 0)} className="mt-1 w-full p-2 bg-white border rounded-md" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+        <div className="md:col-span-2"></div>
+        <div className="text-right space-y-2 font-medium">
+            <p>Sub-Total:</p>
+            <p>GST:</p>
+            <p className="font-bold">Grand Total:</p>
+            <p>Round Off:</p>
+            <p className="font-bold text-lg">Total Orders:</p>
         </div>
-        <div>
-          <label className="block text-sm font-medium">Sales GST (₹)</label>
-          <input type="number" step="0.01" value={salesGst} onChange={e => setSalesGst(parseFloat(e.target.value) || 0)} className="mt-1 w-full p-2 bg-white border rounded-md" />
-        </div>
-        <div className="text-right self-end">
-            <span className="font-bold text-lg">Total: ₹{grandTotal.toFixed(2)}</span>
+        <div className="text-right space-y-2">
+            <p>₹{subTotal.toFixed(2)}</p>
+            <p>₹{totalGst.toFixed(2)}</p>
+            <p className="font-bold">₹{grandTotal.toFixed(2)}</p>
+            <div className="flex justify-end items-center h-6">
+                 <input 
+                    type="number" 
+                    step="0.01"
+                    value={roundOff}
+                    onChange={e => setRoundOff(e.target.value)}
+                    className="w-24 p-1 border bg-white rounded-md text-right h-full"
+                />
+            </div>
+            <p className="font-bold text-lg">₹{netAmount.toFixed(2)}</p>
         </div>
       </div>
       
@@ -189,6 +301,7 @@ interface PurchasesProps {
 
 const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplier, onDeletePurchase }: PurchasesProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewingPurchase, setViewingPurchase] = useState<Purchase | null>(null);
 
   const handleSavePurchase = (purchase: Omit<Purchase, 'id'>) => {
     onAddPurchase(purchase);
@@ -200,6 +313,32 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
       onDeletePurchase(purchaseId);
     }
   };
+
+  const purchaseTotals = useMemo(() => {
+    if (!viewingPurchase) return { subTotal: 0, totalGst: 0, grandTotal: 0, netAmount: 0 };
+    
+    let subTotal = 0;
+    let totalGst = 0;
+
+    viewingPurchase.items.forEach(item => {
+        const itemAmount = item.quantity * item.rate;
+        const discountedAmount = itemAmount * (1 - (item.discount || 0) / 100);
+        subTotal += discountedAmount;
+        
+        const gstPercentage = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+        totalGst += discountedAmount * (gstPercentage / 100);
+    });
+
+    const grandTotal = subTotal + totalGst;
+    
+    return {
+        subTotal,
+        totalGst,
+        grandTotal,
+        netAmount: viewingPurchase.total, // This is the final amount from data
+    };
+  }, [viewingPurchase]);
+
 
   return (
     <div className="space-y-6">
@@ -221,6 +360,7 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
                 <th scope="col" className="px-6 py-3">Purchase ID</th>
                 <th scope="col" className="px-6 py-3">Supplier</th>
                 <th scope="col" className="px-6 py-3">Date</th>
+                <th scope="col" className="px-6 py-3">Payment</th>
                 <th scope="col" className="px-6 py-3 text-right">Total</th>
                 <th scope="col" className="px-6 py-3 text-right">Actions</th>
               </tr>
@@ -228,9 +368,14 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
             <tbody>
               {purchases.map(purchase => (
                 <tr key={purchase.id} className="bg-white border-b hover:bg-gray-50">
-                  <td data-label="Purchase ID" className="px-6 py-4 font-medium whitespace-nowrap">{purchase.id}</td>
+                  <td data-label="Purchase ID" className="px-6 py-4 font-medium whitespace-nowrap">
+                    <button onClick={() => setViewingPurchase(purchase)} className="text-black font-medium hover:underline">
+                      {purchase.id}
+                    </button>
+                  </td>
                   <td data-label="Supplier" className="px-6 py-4">{purchase.supplierName}</td>
                   <td data-label="Date" className="px-6 py-4">{new Date(purchase.date).toLocaleDateString()}</td>
+                  <td data-label="Payment" className="px-6 py-4">{purchase.paymentMethod}</td>
                   <td data-label="Total" className="px-6 py-4 font-semibold text-right">₹{purchase.total.toFixed(2)}</td>
                   <td data-label="Actions" className="px-6 py-4 text-right">
                     <button onClick={() => handleDeleteClick(purchase.id)} className="hover:text-black">
@@ -245,13 +390,102 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
       </div>
 
       {isModalOpen && (
-        <Modal title="Add New Purchase" onClose={() => setIsModalOpen(false)} size="xl">
+        <Modal title="Add New Purchase" onClose={() => setIsModalOpen(false)} size="6xl">
           <PurchaseForm 
             products={products}
             suppliers={suppliers}
             onSave={handleSavePurchase}
             onCancel={() => setIsModalOpen(false)}
           />
+        </Modal>
+      )}
+
+      {viewingPurchase && (
+        <Modal title={`Purchase Details (${viewingPurchase.id})`} onClose={() => setViewingPurchase(null)} size="6xl">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                    <p className="text-sm font-medium text-gray-500">Supplier</p>
+                    <p className="font-semibold text-black">{viewingPurchase.supplierName}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-medium text-gray-500">Date</p>
+                    <p className="font-semibold text-black">{new Date(viewingPurchase.date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-medium text-gray-500">Payment Method</p>
+                    <p className="font-semibold text-black">{viewingPurchase.paymentMethod}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-medium text-gray-500">Total Orders</p>
+                    <p className="font-semibold text-black">₹{viewingPurchase.total.toFixed(2)}</p>
+                </div>
+            </div>
+
+            <h4 className="text-md font-semibold text-black pt-2">Items</h4>
+            <div className="overflow-x-auto max-h-[40vh] border-t border-b py-2">
+                <table className="w-full text-xs min-w-[1200px]">
+                    <thead>
+                        <tr className="border-b">
+                          <th className="p-2 text-left">Product</th>
+                          <th className="p-2 text-left">Pkg</th>
+                          <th className="p-2 text-left">Qty</th>
+                          <th className="p-2 text-left">Rate</th>
+                          <th className="p-2 text-left">Amount</th>
+                          <th className="p-2 text-left">MRP</th>
+                          <th className="p-2 text-left">Disc%</th>
+                          <th className="p-2 text-left">HSN</th>
+                          <th className="p-2 text-left">Batch</th>
+                          <th className="p-2 text-left">Expiry</th>
+                          <th className="p-2 text-left">CGST%</th>
+                          <th className="p-2 text-left">SGST%</th>
+                          <th className="p-2 text-left">IGST%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {viewingPurchase.items.map(item => (
+                            <tr key={item.productId} className="border-b">
+                                <td className="p-2 font-medium whitespace-nowrap">{item.productName}</td>
+                                <td className="p-2">{item.packaging}</td>
+                                <td className="p-2">{item.quantity}</td>
+                                <td className="p-2">₹{item.rate.toFixed(2)}</td>
+                                <td className="p-2">₹{(item.quantity * item.rate).toFixed(2)}</td>
+                                <td className="p-2">₹{item.mrp.toFixed(2)}</td>
+                                <td className="p-2">{item.discount}%</td>
+                                <td className="p-2">{item.hsnCode}</td>
+                                <td className="p-2">{item.batchNo}</td>
+                                <td className="p-2">{item.expiryDate}</td>
+                                <td className="p-2">{item.cgst}%</td>
+                                <td className="p-2">{item.sgst}%</td>
+                                <td className="p-2">{item.igst}%</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                <div className="md:col-span-2"></div>
+                <div className="text-right space-y-2 font-medium">
+                    <p>Sub-Total:</p>
+                    <p>GST:</p>
+                    <p className="font-bold">Grand Total:</p>
+                    <p>Round Off:</p>
+                    <p className="font-bold text-lg">Total Orders:</p>
+                </div>
+                <div className="text-right space-y-2">
+                    <p>₹{purchaseTotals.subTotal.toFixed(2)}</p>
+                    <p>₹{purchaseTotals.totalGst.toFixed(2)}</p>
+                    <p className="font-bold">₹{purchaseTotals.grandTotal.toFixed(2)}</p>
+                    <p>₹{(viewingPurchase.roundOff || 0).toFixed(2)}</p>
+                    <p className="font-bold text-lg">₹{purchaseTotals.netAmount.toFixed(2)}</p>
+                </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t mt-4">
+              <button type="button" onClick={() => setViewingPurchase(null)} className="px-4 py-2 bg-gray-200 rounded-md">Close</button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

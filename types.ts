@@ -23,19 +23,19 @@ export interface Customer {
 }
 
 export interface Supplier {
-  id: string;
+  id:string;
   name: string;
   phone: string;
   address: string;
+  gstNumber: string;
+  dlNo: string;
 }
 
 export interface Product {
   id: string;
   name: string;
   manufacturer: string;
-  batchNo: string;
   shelfLocation: string;
-  expiryDate: string;
   stock: number;
   mrp: number;
 }
@@ -52,8 +52,15 @@ export interface PurchaseItem {
   productId: string;
   productName: string;
   quantity: number;
-  cost: number;
-  total: number;
+  packaging: string;
+  rate: number;
+  mrp: number;
+  discount: number; // percentage
+  amount: number; // quantity * rate
+  hsnCode: string;
+  cgst: number; // percentage
+  sgst: number; // percentage
+  igst: number; // percentage
   batchNo: string;
   expiryDate: string;
 }
@@ -63,13 +70,12 @@ export interface Purchase {
   supplierId: string;
   supplierName: string;
   date: string;
+  paymentMethod: 'Credit' | 'Cash' | 'Bank Transfer';
   items: PurchaseItem[];
-  total: number;
-  purchaseGst: number;
-  salesGst: number;
+  roundOff?: number;
+  total: number; // Grand total including taxes and round off
 }
 
-// FIX: Add ChatMessage interface for Chatbot component.
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;

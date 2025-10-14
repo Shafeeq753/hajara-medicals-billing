@@ -62,13 +62,18 @@ const Products = ({ products, purchases, onAddProduct, onUpdateProduct, onDelete
     const history = purchases.flatMap(purchase => {
       const relevantItem = purchase.items.find(item => item.productId === historyProduct.id);
       if (relevantItem) {
+        const itemAmount = relevantItem.quantity * relevantItem.rate;
+        const discountedAmount = itemAmount * (1 - (relevantItem.discount || 0) / 100);
+        const gstPercentage = (relevantItem.cgst || 0) + (relevantItem.sgst || 0) + (relevantItem.igst || 0);
+        const total = discountedAmount * (1 + gstPercentage / 100);
+
         return [{
           purchaseId: purchase.id,
           date: purchase.date,
           supplierName: purchase.supplierName,
           quantity: relevantItem.quantity,
-          cost: relevantItem.cost,
-          total: relevantItem.total,
+          cost: relevantItem.rate,
+          total: total,
         }];
       }
       return [];
@@ -116,9 +121,7 @@ const Products = ({ products, purchases, onAddProduct, onUpdateProduct, onDelete
               <tr>
                 <th scope="col" className="px-6 py-3">Name</th>
                 <th scope="col" className="px-6 py-3">Manufacturer</th>
-                <th scope="col" className="px-6 py-3">Batch No.</th>
                 <th scope="col" className="px-6 py-3">Shelf</th>
-                <th scope="col" className="px-6 py-3">Expiry Date</th>
                 <th scope="col" className="px-6 py-3 text-right">Stock</th>
                 <th scope="col" className="px-6 py-3 text-right">MRP</th>
                 <th scope="col" className="px-6 py-3 text-right">Actions</th>
@@ -136,9 +139,7 @@ const Products = ({ products, purchases, onAddProduct, onUpdateProduct, onDelete
                     </button>
                   </td>
                   <td data-label="Manufacturer" className="px-6 py-4">{product.manufacturer}</td>
-                  <td data-label="Batch No." className="px-6 py-4">{product.batchNo}</td>
                   <td data-label="Shelf" className="px-6 py-4">{product.shelfLocation}</td>
-                  <td data-label="Expiry" className="px-6 py-4">{product.expiryDate}</td>
                   <td data-label="Stock" className={`px-6 py-4 font-bold text-right text-black`}>
                     {product.stock}
                   </td>

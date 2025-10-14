@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Sale, Customer, Product } from '../types';
+import { Sale, Customer, Product, Purchase, PurchaseItem } from '../types';
 import { CurrencyIcon, UsersIcon, WarningIcon, BoxIcon, CalendarIcon } from './icons/Icons';
 
 interface DashboardProps {
   sales: Sale[];
   customers: Customer[];
   products: Product[];
+  purchases: Purchase[];
 }
 
 const StatCard = ({ title, value, icon, color }: { title: string; value: string | number; icon: React.ReactNode; color: string }) => (
@@ -65,7 +66,7 @@ const SalesChart = ({ sales }: { sales: Sale[] }) => {
 };
 
 
-const Dashboard = ({ sales, customers, products }: DashboardProps) => {
+const Dashboard = ({ sales, customers, products, purchases }: DashboardProps) => {
   const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
   const totalCustomers = customers.length;
   const lowStockCount = products.filter(p => p.stock < 50).length;
@@ -76,13 +77,25 @@ const Dashboard = ({ sales, customers, products }: DashboardProps) => {
     const today = new Date();
     const expiryLimit = new Date();
     expiryLimit.setDate(today.getDate() + 90);
-    return products
-      .filter(p => {
-        const expiryDate = new Date(p.expiryDate);
-        return expiryDate >= today && expiryDate <= expiryLimit;
-      })
-      .sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
-  }, [products]);
+
+    const productMap = new Map(products.map(p => [p.id, p]));
+    const expiringBatches: PurchaseItem[] = [];
+
+    purchases.forEach(purchase => {
+      purchase.items.forEach(item => {
+        const expiryDate = new Date(item.expiryDate);
+        const product = productMap.get(item.productId);
+        
+        // Only consider batches for products that are currently in stock
+        if (product && product.stock > 0 && expiryDate >= today && expiryDate <= expiryLimit) {
+          expiringBatches.push(item);
+        }
+      });
+    });
+    
+    // Sort by expiry date, soonest first
+    return expiringBatches.sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+  }, [products, purchases]);
 
 
   return (
@@ -131,16 +144,16 @@ const Dashboard = ({ sales, customers, products }: DashboardProps) => {
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-lg">
-          <h3 className="text-xl font-semibold text-black mb-4 flex items-center"><CalendarIcon /> <span className="ml-2">Products Nearing Expiry (90 days)</span></h3>
+          <h3 className="text-xl font-semibold text-black mb-4 flex items-center"><CalendarIcon /> <span className="ml-2">Batches Nearing Expiry (90 days)</span></h3>
           <div className="max-h-80 overflow-y-auto pr-2">
             <ul className="space-y-3">
-              {nearingExpiryProducts.length > 0 ? nearingExpiryProducts.map(p => (
-                <li key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+              {nearingExpiryProducts.length > 0 ? nearingExpiryProducts.map((batch, index) => (
+                <li key={`${batch.productId}-${batch.batchNo}-${index}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                    <div>
-                    <p className="font-semibold text-black">{p.name}</p>
-                    <p className="text-sm text-black">Stock: {p.stock}</p>
+                    <p className="font-semibold text-black">{batch.productName}</p>
+                    <p className="text-sm text-black">Batch: {batch.batchNo}</p>
                   </div>
-                  <span className="font-semibold text-black">{new Date(p.expiryDate).toLocaleDateString()}</span>
+                  <span className="font-semibold text-black">{new Date(batch.expiryDate).toLocaleDateString()}</span>
                 </li>
               )) : <p className="text-black">No products nearing expiry.</p>}
             </ul>
