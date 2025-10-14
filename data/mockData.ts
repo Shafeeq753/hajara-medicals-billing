@@ -1,5 +1,3 @@
-
-
 import { Customer, Product, Sale, Purchase, Supplier, User } from '../types';
 
 export const DUMMY_USERS: User[] = [
@@ -87,5 +85,8 @@ export const DUMMY_PURCHASES: Purchase[] = [
         ],
         roundOff: 0.00,
         total: 3276.00,
+        paymentStatus: 'Unpaid',
+        paidAmount: 0,
+        paymentHistory: [],
     }
 ];

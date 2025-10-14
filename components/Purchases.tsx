@@ -12,7 +12,7 @@ const PurchaseForm = ({
 }: {
   products: Product[];
   suppliers: Supplier[];
-  onSave: (purchase: Omit<Purchase, 'id'>) => void;
+  onSave: (purchase: Omit<Purchase, 'id' | 'paymentStatus' | 'paidAmount' | 'paymentHistory'>) => void;
   onCancel: () => void;
 }) => {
   const [supplierId, setSupplierId] = useState('');
@@ -82,7 +82,6 @@ const PurchaseForm = ({
         if (item.productId === productId) {
             let processedValue = value;
             if (typeof value === 'string') {
-                 // FIX: Cast `field` to string to satisfy `includes` method type requirement.
                  if (['quantity', 'rate', 'mrp', 'discount', 'cgst', 'sgst', 'igst'].includes(field as string)) {
                     processedValue = field === 'quantity' ? parseInt(value, 10) || 0 : parseFloat(value) || 0;
                 }
@@ -292,7 +291,7 @@ const PurchaseForm = ({
 // Main Component
 interface PurchasesProps {
   purchases: Purchase[];
-  onAddPurchase: (purchase: Omit<Purchase, 'id'>) => void;
+  onAddPurchase: (purchase: Omit<Purchase, 'id' | 'paymentStatus' | 'paidAmount' | 'paymentHistory'>) => void;
   products: Product[];
   suppliers: Supplier[];
   onAddSupplier: (supplier: Omit<Supplier, 'id'>) => void;
@@ -303,7 +302,7 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingPurchase, setViewingPurchase] = useState<Purchase | null>(null);
 
-  const handleSavePurchase = (purchase: Omit<Purchase, 'id'>) => {
+  const handleSavePurchase = (purchase: Omit<Purchase, 'id' | 'paymentStatus' | 'paidAmount' | 'paymentHistory'>) => {
     onAddPurchase(purchase);
     setIsModalOpen(false);
   };

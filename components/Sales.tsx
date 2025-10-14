@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Sale } from '../types';
 import Modal from './Modal';
-import { PlusIcon, TrashIcon } from './icons/Icons';
+import { PlusIcon, TrashIcon, CurrencyIcon } from './icons/Icons';
 
 // New Sale Form component for the modal
 const SaleForm = ({ onSave, onCancel }: {
@@ -61,9 +61,10 @@ interface SalesProps {
   sales: Sale[];
   onAddSale: (sale: Omit<Sale, 'id'>) => void;
   onDeleteSale: (saleId: string) => void;
+  stockAmount: number;
 }
 
-const Sales = ({ sales, onAddSale, onDeleteSale }: SalesProps) => {
+const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleSaveSale = (sale: Omit<Sale, 'id'>) => {
@@ -87,6 +88,16 @@ const Sales = ({ sales, onAddSale, onDeleteSale }: SalesProps) => {
         >
           <PlusIcon /> Add Sales / Billing
         </button>
+      </div>
+      
+      <div className={`p-6 rounded-xl shadow-lg flex items-center space-x-4 ${stockAmount >= 0 ? 'bg-white' : 'bg-red-50'}`}>
+        <div className={`p-3 rounded-full ${stockAmount >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+          <CurrencyIcon />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-black">Total Savings (Stock Amount)</p>
+          <p className={`text-2xl font-bold ${stockAmount >= 0 ? 'text-black' : 'text-red-600'}`}>₹{stockAmount.toFixed(2)}</p>
+        </div>
       </div>
 
       <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">

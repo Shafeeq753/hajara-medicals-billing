@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { View } from '../types';
-import { DashboardIcon, SalesIcon, PurchasesIcon, CustomersIcon, MenuIcon, CloseIcon, ProductIcon, SupplierIcon, UserIcon, HistoryIcon, LogoutIcon } from './icons/Icons';
+import { DashboardIcon, AccountsIcon, CustomersIcon, MenuIcon, CloseIcon, ProductIcon, SupplierIcon, UserIcon, HistoryIcon, LogoutIcon } from './icons/Icons';
 import { User } from '../types';
 
 interface HeaderProps {
@@ -11,17 +10,17 @@ interface HeaderProps {
   onLogout: () => void;
 }
 
-const NavItem = ({ view, label, icon, activeView, onClick }: {
+const NavItem = ({ view, label, icon, active, onClick }: {
   view: View;
   label: string;
   icon: React.ReactNode;
-  activeView: View;
+  active: boolean;
   onClick: (view: View) => void;
 }) => (
   <button
     onClick={() => onClick(view)}
     className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
-      activeView === view
+      active
         ? 'bg-blue-600 text-white shadow-md'
         : 'text-black hover:bg-slate-100'
     }`}
@@ -39,20 +38,21 @@ const Header = ({ activeView, setActiveView, currentUser, onLogout }: HeaderProp
     setIsMobileMenuOpen(false);
   }
 
+  const isAccountsActive = ['accounts', 'sales', 'purchases', 'pendingPayments'].includes(activeView);
+
   const navContent = (
     <>
       <div className="px-4 py-6">
         <h1 className="text-2xl font-bold text-black">Hajara Medicals</h1>
       </div>
       <nav className="flex-1 px-4 space-y-2">
-        <NavItem view="dashboard" label="Dashboard" icon={<DashboardIcon />} activeView={activeView} onClick={handleNavClick} />
-        <NavItem view="sales" label="Sales / Billing" icon={<SalesIcon />} activeView={activeView} onClick={handleNavClick} />
-        <NavItem view="purchases" label="Purchases" icon={<PurchasesIcon />} activeView={activeView} onClick={handleNavClick} />
-        <NavItem view="products" label="Products" icon={<ProductIcon />} activeView={activeView} onClick={handleNavClick} />
-        <NavItem view="suppliers" label="Suppliers" icon={<SupplierIcon />} activeView={activeView} onClick={handleNavClick} />
-        <NavItem view="customers" label="Customers" icon={<CustomersIcon />} activeView={activeView} onClick={handleNavClick} />
-        <NavItem view="users" label="Users" icon={<UserIcon />} activeView={activeView} onClick={handleNavClick} />
-        <NavItem view="history" label="History Log" icon={<HistoryIcon />} activeView={activeView} onClick={handleNavClick} />
+        <NavItem view="dashboard" label="Dashboard" icon={<DashboardIcon />} active={activeView === 'dashboard'} onClick={handleNavClick} />
+        <NavItem view="accounts" label="Accounts" icon={<AccountsIcon />} active={isAccountsActive} onClick={handleNavClick} />
+        <NavItem view="products" label="Products" icon={<ProductIcon />} active={activeView === 'products'} onClick={handleNavClick} />
+        <NavItem view="suppliers" label="Suppliers" icon={<SupplierIcon />} active={activeView === 'suppliers'} onClick={handleNavClick} />
+        <NavItem view="customers" label="Customers" icon={<CustomersIcon />} active={activeView === 'customers'} onClick={handleNavClick} />
+        <NavItem view="users" label="Users" icon={<UserIcon />} active={activeView === 'users'} onClick={handleNavClick} />
+        <NavItem view="history" label="History Log" icon={<HistoryIcon />} active={activeView === 'history'} onClick={handleNavClick} />
       </nav>
       <div className="px-4 py-4 mt-auto border-t">
         <div className="text-sm text-black mb-2">Logged in as: <span className="font-bold">{currentUser.name}</span></div>

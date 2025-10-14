@@ -65,6 +65,13 @@ export interface PurchaseItem {
   expiryDate: string;
 }
 
+export interface PaymentRecord {
+  id: string;
+  date: string;
+  amount: number;
+  screenshotUrl?: string; // Data URL of the uploaded image
+}
+
 export interface Purchase {
   id: string;
   supplierId: string;
@@ -74,7 +81,11 @@ export interface Purchase {
   items: PurchaseItem[];
   roundOff?: number;
   total: number; // Grand total including taxes and round off
+  paymentStatus: 'Paid' | 'Partially Paid' | 'Unpaid';
+  paidAmount: number;
+  paymentHistory: PaymentRecord[];
 }
+
 
 export interface ChatMessage {
   role: 'user' | 'model';
@@ -82,4 +93,4 @@ export interface ChatMessage {
   image?: string;
 }
 
-export type View = 'dashboard' | 'sales' | 'purchases' | 'customers' | 'products' | 'suppliers' | 'users' | 'history';
+export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'customers' | 'products' | 'suppliers' | 'users' | 'history' | 'pendingPayments';

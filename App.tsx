@@ -1,8 +1,5 @@
-
-
-
-import React, { useState } from 'react';
-import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View } from './types';
+import React, { useState, useMemo } from 'react';
+import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord } from './types';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Sales from './components/Sales';
@@ -13,6 +10,8 @@ import Suppliers from './components/Suppliers';
 import Users from './components/Users';
 import HistoryLog from './components/HistoryLog';
 import Login from './components/Login';
+import Accounts from './components/Accounts';
+import PendingPayments from './components/PendingPayments';
 import { DUMMY_CUSTOMERS, DUMMY_PRODUCTS, DUMMY_SALES, DUMMY_PURCHASES, DUMMY_SUPPLIERS, DUMMY_USERS } from './data/mockData';
 
 const App = () => {
@@ -144,8 +143,14 @@ const App = () => {
   };
 
   // Purchase Handlers
-  const handleAddPurchase = (purchase: Omit<Purchase, 'id'>) => {
-    const newPurchase = { ...purchase, id: `PUR-${Date.now()}` };
+  const handleAddPurchase = (purchase: Omit<Purchase, 'id' | 'paymentStatus' | 'paidAmount' | 'paymentHistory'>) => {
+    const newPurchase: Purchase = {
+      ...purchase,
+      id: `PUR-${Date.now()}`,
+      paymentStatus: purchase.paymentMethod === 'Credit' ? 'Unpaid' : 'Paid',
+      paidAmount: purchase.paymentMethod === 'Credit' ? 0 : purchase.total,
+      paymentHistory: [],
+    };
     setPurchases(prev => [newPurchase, ...prev]);
      // Update product stock and MRP
     setProducts(prevProducts => {
@@ -182,14 +187,50 @@ const App = () => {
     addLogEntry(`Deleted purchase ${purchaseId}`);
   };
 
+  const handleUpdatePurchasePayment = (purchaseId: string, paymentRecord: Omit<PaymentRecord, 'id'>) => {
+    setPurchases(prev => prev.map(p => {
+      if (p.id === purchaseId) {
+        const newPaidAmount = p.paidAmount + paymentRecord.amount;
+        const newStatus = newPaidAmount >= p.total ? 'Paid' : 'Partially Paid';
+        const newHistory = [...p.paymentHistory, { ...paymentRecord, id: `PAY-${Date.now()}` }];
+        
+        addLogEntry(`Recorded payment of ₹${paymentRecord.amount.toFixed(2)} for purchase ${p.id}. New status: ${newStatus}.`);
+
+        return {
+          ...p,
+          paidAmount: newPaidAmount,
+          paymentStatus: newStatus,
+          paymentHistory: newHistory,
+        };
+      }
+      return p;
+    }));
+  };
+
+  const stockAmount = useMemo(() => {
+    const totalSaleSavings = sales.reduce((sum, sale) => sum + sale.savings, 0);
+    const totalPurchasePayments = purchases.reduce((sum, purchase) => {
+        // For non-credit, the full amount is paid. For credit, use paidAmount.
+        if (purchase.paymentMethod !== 'Credit') {
+            return sum + purchase.total;
+        }
+        return sum + purchase.paidAmount;
+    }, 0);
+    return totalSaleSavings - totalPurchasePayments;
+  }, [sales, purchases]);
+
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
         return <Dashboard sales={sales} customers={customers} products={products} purchases={purchases} />;
+      case 'accounts':
+        return <Accounts setActiveView={setActiveView} />;
       case 'sales':
-        return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} />;
+        return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} />;
       case 'purchases':
         return <Purchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} />;
+      case 'pendingPayments':
+        return <PendingPayments purchases={purchases.filter(p => p.paymentMethod === 'Credit')} onUpdatePayment={handleUpdatePurchasePayment} stockAmount={stockAmount} />;
       case 'customers':
         return <Customers customers={customers} onAddCustomer={handleAddCustomer} products={products} onUpdateCustomerMedicines={handleUpdateCustomerMedicines} />;
       case 'suppliers':
