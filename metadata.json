@@ -1,5 +1,7 @@
 {
   "name": "Hajara Medicals: Billing & Inventory",
   "description": "A comprehensive, modern, and responsive billing and inventory management application designed for pharmaceutical shops. It allows for managing customers, sales, purchases, and tracking outstanding balances.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

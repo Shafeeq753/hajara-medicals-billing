@@ -1,7 +1,72 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Purchase, Product, PurchaseItem, Supplier } from '../types';
-import { TrashIcon, PlusIcon } from './icons/Icons';
+import { TrashIcon, PlusIcon, SpinnerIcon, CameraIcon } from './icons/Icons';
 import Modal from './Modal';
+import { GoogleGenAI, Type } from "@google/genai";
+
+
+const ApprovalModalContent = ({ data, onConfirm, onReject }: {
+  data: any,
+  onConfirm: () => void,
+  onReject: () => void
+}) => {
+    const matchedItems = data.items.filter((i: any) => i.matchedProduct);
+    const unmatchedItems = data.items.filter((i: any) => !i.matchedProduct);
+
+    return (
+        <div className="space-y-4 text-sm">
+            <div className="p-4 bg-gray-50 rounded-lg border">
+                <h3 className="font-bold text-lg mb-2 text-black">Extracted Details</h3>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <p><span className="font-semibold">Supplier:</span> {data.supplierName}</p>
+                    <p className={data.matchedSupplier ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                        Status: {data.matchedSupplier ? `Matched (${data.matchedSupplier.name})` : 'Not Matched'}
+                    </p>
+                    <p><span className="font-semibold">Date:</span> {data.date}</p>
+                </div>
+            </div>
+            
+            {unmatchedItems.length > 0 && (
+                <div className="p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+                    <p className="font-semibold text-black">Warning: {unmatchedItems.length} product(s) could not be matched and will be ignored.</p>
+                    <ul className="list-disc list-inside text-black text-xs mt-1">
+                        {unmatchedItems.map((p: any, index: number) => <li key={index}>{p.productName}</li>)}
+                    </ul>
+                </div>
+            )}
+            
+            <h4 className="text-md font-semibold text-black pt-2 border-t">Items to be Added ({matchedItems.length})</h4>
+            <div className="overflow-y-auto max-h-[30vh]">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    <th className="p-1 text-left">Product</th>
+                    <th className="p-1 text-right">Qty</th>
+                    <th className="p-1 text-right">Rate</th>
+                    <th className="p-1 text-left">Batch</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matchedItems.map((item: any, index: number) => (
+                    <tr key={index} className="border-b">
+                      <td className="p-1">{item.productName}</td>
+                      <td className="p-1 text-right">{item.quantity}</td>
+                      <td className="p-1 text-right">{item.rate?.toFixed(2)}</td>
+                      <td className="p-1">{item.batchNo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                <button type="button" onClick={onReject} className="px-4 py-2 bg-gray-200 rounded-md">Reject</button>
+                <button type="button" onClick={onConfirm} className="px-4 py-2 bg-blue-600 text-white rounded-md">Confirm & Autofill</button>
+            </div>
+        </div>
+    );
+};
+
 
 // Purchase Form Component (for modal)
 const PurchaseForm = ({
@@ -21,6 +86,13 @@ const PurchaseForm = ({
   const [items, setItems] = useState<Omit<PurchaseItem, 'amount' | 'productName'>[]>([]);
   const [selectedProductIdToAdd, setSelectedProductIdToAdd] = useState('');
   const [roundOff, setRoundOff] = useState('0');
+  
+  // State for Autofill feature
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [autofillError, setAutofillError] = useState('');
+  const [autofilledData, setAutofilledData] = useState<any | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
 
   const availableProducts = useMemo(() => {
     const addedProductIds = items.map(item => item.productId);
@@ -169,9 +241,146 @@ const PurchaseForm = ({
       total: netAmount,
     });
   };
+  
+    const fileToGenerativePart = async (file: File) => {
+        const base64EncodedDataPromise = new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+            reader.readAsDataURL(file);
+        });
+        return {
+            inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+        };
+    };
+
+    const handleAutofill = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsProcessing(true);
+        setAutofillError('');
+        setAutofilledData(null);
+
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const imagePart = await fileToGenerativePart(file);
+
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    supplierName: { type: Type.STRING },
+                    date: { type: Type.STRING, description: 'Invoice date in YYYY-MM-DD format.' },
+                    items: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                productName: { type: Type.STRING },
+                                packaging: { type: Type.STRING },
+                                quantity: { type: Type.NUMBER },
+                                rate: { type: Type.NUMBER },
+                                mrp: { type: Type.NUMBER },
+                                discount: { type: Type.NUMBER, description: 'Discount percentage. Default to 0 if not found.' },
+                                hsnCode: { type: Type.STRING },
+                                batchNo: { type: Type.STRING },
+                                expiryDate: { type: Type.STRING, description: 'Expiry date in MM/YYYY format. Convert from MM-YY if necessary.' },
+                                cgst: { type: Type.NUMBER },
+                                sgst: { type: Type.NUMBER },
+                            }
+                        }
+                    }
+                }
+            };
+            
+            const prompt = `You are an intelligent document parser for a pharmacy. Analyze the provided image of a purchase bill and extract the data into a structured JSON format according to the provided schema. The supplier name is usually at the top. The date should be in YYYY-MM-DD format. For each item in the table, extract its description, packaging, quantity, rate, MRP, discount percentage (default to 0 if not present), HSN code, batch number, expiry date (convert MM-YY or any other format to MM/YYYY), CGST percentage, and SGST percentage.`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: { parts: [imagePart, { text: prompt }] },
+                config: {
+                    responseMimeType: 'application/json',
+                    responseSchema: schema
+                }
+            });
+
+            const parsedData = JSON.parse(response.text);
+
+            const matchedSupplier = suppliers.find(s => s.name.toLowerCase().includes(parsedData.supplierName?.toLowerCase()));
+            const matchedItems = parsedData.items.map((item: any) => {
+                const matchedProduct = products.find(p => p.name.toLowerCase() === item.productName.toLowerCase());
+                return { ...item, matchedProduct };
+            });
+
+            setAutofilledData({ ...parsedData, matchedSupplier, items: matchedItems });
+
+        } catch (e) {
+            console.error(e);
+            setAutofillError('Failed to process the bill. Please check the image or enter details manually.');
+        } finally {
+            setIsProcessing(false);
+            if(imageInputRef.current) imageInputRef.current.value = "";
+        }
+    };
+    
+    const handleConfirmAutofill = () => {
+      if (!autofilledData) return;
+
+      if (autofilledData.matchedSupplier) {
+          setSupplierId(autofilledData.matchedSupplier.id);
+      }
+      if (autofilledData.date) {
+          setDate(autofilledData.date);
+      }
+      
+      const newItemsFromAutofill = autofilledData.items
+          .filter((item: any) => item.matchedProduct)
+          .map((item: any) => ({
+              productId: item.matchedProduct.id,
+              quantity: item.quantity || 1,
+              packaging: item.packaging || '',
+              rate: item.rate || 0,
+              mrp: item.mrp || item.matchedProduct.mrp || 0,
+              discount: item.discount || 0,
+              hsnCode: item.hsnCode || '',
+              cgst: item.cgst || 0,
+              sgst: item.sgst || 0,
+              igst: 0,
+              batchNo: item.batchNo || '',
+              expiryDate: item.expiryDate || '',
+          }));
+
+      setItems(prev => [...prev, ...newItemsFromAutofill]);
+      setAutofilledData(null);
+    };
+
+    const handleRejectAutofill = () => {
+        setAutofilledData(null);
+    };
+
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h3 className="text-lg font-semibold">Purchase Details</h3>
+        </div>
+        <div className="flex-shrink-0">
+          <input type="file" accept="image/*" onChange={handleAutofill} ref={imageInputRef} className="hidden" />
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            className="bg-green-600 text-white px-3 py-2 rounded-lg shadow-md hover:bg-green-700 flex items-center gap-2 disabled:bg-gray-400"
+            disabled={isProcessing}
+          >
+            {isProcessing ? <SpinnerIcon /> : <CameraIcon />}
+            <span>Upload & Autofill Bill</span>
+          </button>
+        </div>
+      </div>
+      {autofillError && <p className="text-sm text-red-500 text-center -mt-2">{autofillError}</p>}
+
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium">Supplier</label>
@@ -297,6 +506,17 @@ const PurchaseForm = ({
         <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md">Save Purchase</button>
       </div>
     </form>
+    
+    {autofilledData && (
+        <Modal title="Review Autofilled Data" onClose={handleRejectAutofill} size="lg">
+            <ApprovalModalContent 
+                data={autofilledData} 
+                onConfirm={handleConfirmAutofill} 
+                onReject={handleRejectAutofill} 
+            />
+        </Modal>
+    )}
+    </>
   );
 };
 
