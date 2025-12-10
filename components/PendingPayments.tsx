@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Purchase, PaymentRecord } from '../types';
 import Modal from './Modal';
@@ -24,13 +25,18 @@ const StatusBadge = ({ status }: { status: 'Unpaid' | 'Partially Paid' | 'Paid' 
 const PendingPayments = ({ purchases, onUpdatePayment, stockAmount }: PendingPaymentsProps) => {
     const [paymentModalPurchase, setPaymentModalPurchase] = useState<Purchase | null>(null);
     const [historyModalPurchase, setHistoryModalPurchase] = useState<Purchase | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
 
     const pendingPurchases = useMemo(() => {
         return purchases
             .filter(p => p.paymentStatus !== 'Paid')
+            .filter(p => 
+                p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                p.supplierName.toLowerCase().includes(searchTerm.toLowerCase())
+            )
             .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [purchases]);
+    }, [purchases, searchTerm]);
 
     const handleSavePayment = (purchaseId: string, paymentRecord: Omit<PaymentRecord, 'id'>) => {
         onUpdatePayment(purchaseId, paymentRecord);
@@ -52,6 +58,15 @@ const PendingPayments = ({ purchases, onUpdatePayment, stockAmount }: PendingPay
             </div>
 
             <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
+                <div>
+                    <input
+                        type="text"
+                        placeholder="Search by ID or Supplier..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full max-w-sm p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4"
+                    />
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left responsive-table">
                         <thead className="text-xs text-black uppercase bg-gray-50">

@@ -74,6 +74,7 @@ export interface PaymentRecord {
 
 export interface Purchase {
   id: string;
+  invoiceNo?: string;
   supplierId: string;
   supplierName: string;
   date: string;

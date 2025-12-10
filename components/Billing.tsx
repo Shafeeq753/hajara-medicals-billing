@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Bill, BillItem, Product } from '../types';
 import { PlusIcon, TrashIcon, PrintIcon } from './icons/Icons';
@@ -144,8 +145,27 @@ interface BillHistoryProps {
     setViewingBill: (bill: Bill | null) => void;
 }
 
-const BillHistory = ({ bills, setViewingBill }: BillHistoryProps) => (
+const BillHistory = ({ bills, setViewingBill }: BillHistoryProps) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredBills = useMemo(() => {
+        return bills.filter(b => 
+            b.billNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            b.patientName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [bills, searchTerm]);
+
+    return (
     <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
+        <div>
+          <input
+            type="text"
+            placeholder="Search by Bill No or Patient..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full max-w-sm p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4"
+          />
+        </div>
         <div className="overflow-x-auto">
         <table className="w-full text-sm text-left responsive-table">
             <thead className="text-xs text-black uppercase bg-gray-50">
@@ -158,7 +178,7 @@ const BillHistory = ({ bills, setViewingBill }: BillHistoryProps) => (
             </tr>
             </thead>
             <tbody>
-            {bills.map(bill => (
+            {filteredBills.map(bill => (
                 <tr key={bill.id} className="bg-white border-b hover:bg-gray-50">
                     <td data-label="Bill Number" className="px-6 py-4 font-medium">{bill.billNumber}</td>
                     <td data-label="Date" className="px-6 py-4">{new Date(bill.date).toLocaleDateString()}</td>
@@ -173,10 +193,11 @@ const BillHistory = ({ bills, setViewingBill }: BillHistoryProps) => (
             ))}
             </tbody>
         </table>
-        {bills.length === 0 && <p className="text-center text-black py-8">No bills have been created yet.</p>}
+        {filteredBills.length === 0 && <p className="text-center text-black py-8">No bills found.</p>}
         </div>
     </div>
-);
+    );
+};
 
 
 interface BillingProps {

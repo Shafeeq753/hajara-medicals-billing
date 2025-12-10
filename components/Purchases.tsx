@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Purchase, Product, PurchaseItem, Supplier } from '../types';
 import { TrashIcon, PlusIcon, SpinnerIcon, CameraIcon } from './icons/Icons';
@@ -10,7 +11,6 @@ const ApprovalModalContent = ({ data, onConfirm, onReject }: {
   onConfirm: () => void,
   onReject: () => void
 }) => {
-    const matchedItems = data.items.filter((i: any) => i.matchedProduct);
     const unmatchedItems = data.items.filter((i: any) => !i.matchedProduct);
 
     return (
@@ -23,19 +23,20 @@ const ApprovalModalContent = ({ data, onConfirm, onReject }: {
                         Status: {data.matchedSupplier ? `Matched (${data.matchedSupplier.name})` : 'Not Matched'}
                     </p>
                     <p><span className="font-semibold">Date:</span> {data.date}</p>
+                    <p><span className="font-semibold">Invoice No:</span> {data.invoiceNo || 'N/A'}</p>
                 </div>
             </div>
             
             {unmatchedItems.length > 0 && (
-                <div className="p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
-                    <p className="font-semibold text-black">Warning: {unmatchedItems.length} product(s) could not be matched and will be ignored.</p>
+                 <div className="p-3 bg-blue-100 border border-blue-300 rounded-lg">
+                    <p className="font-semibold text-black">{unmatchedItems.length} new product(s) will be automatically created and added to this purchase.</p>
                     <ul className="list-disc list-inside text-black text-xs mt-1">
                         {unmatchedItems.map((p: any, index: number) => <li key={index}>{p.productName}</li>)}
                     </ul>
                 </div>
             )}
             
-            <h4 className="text-md font-semibold text-black pt-2 border-t">Items to be Added ({matchedItems.length})</h4>
+            <h4 className="text-md font-semibold text-black pt-2 border-t">Items to be Added ({data.items.length})</h4>
             <div className="overflow-y-auto max-h-[30vh]">
               <table className="w-full text-xs">
                 <thead>
@@ -44,15 +45,21 @@ const ApprovalModalContent = ({ data, onConfirm, onReject }: {
                     <th className="p-1 text-right">Qty</th>
                     <th className="p-1 text-right">Rate</th>
                     <th className="p-1 text-left">Batch</th>
+                    <th className="p-1 text-left">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {matchedItems.map((item: any, index: number) => (
+                  {data.items.map((item: any, index: number) => (
                     <tr key={index} className="border-b">
                       <td className="p-1">{item.productName}</td>
                       <td className="p-1 text-right">{item.quantity}</td>
                       <td className="p-1 text-right">{item.rate?.toFixed(2)}</td>
                       <td className="p-1">{item.batchNo}</td>
+                      <td className="p-1">
+                        {item.matchedProduct 
+                          ? <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800">Matched</span> 
+                          : <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">New</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -74,14 +81,17 @@ const PurchaseForm = ({
   suppliers,
   onSave,
   onCancel,
+  onAddProduct,
 }: {
   products: Product[];
   suppliers: Supplier[];
   onSave: (purchase: Omit<Purchase, 'id' | 'paymentStatus' | 'paidAmount' | 'paymentHistory'>) => void;
   onCancel: () => void;
+  onAddProduct: (product: Omit<Product, 'id'>) => Product;
 }) => {
   const [supplierId, setSupplierId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [invoiceNo, setInvoiceNo] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Credit' | 'Cash' | 'Bank Transfer'>('Credit');
   const [items, setItems] = useState<Omit<PurchaseItem, 'amount' | 'productName'>[]>([]);
   const [selectedProductIdToAdd, setSelectedProductIdToAdd] = useState('');
@@ -235,6 +245,7 @@ const PurchaseForm = ({
       supplierId,
       supplierName: supplier.name,
       date,
+      invoiceNo,
       paymentMethod,
       items: finalItems,
       roundOff: finalRoundOff,
@@ -269,6 +280,7 @@ const PurchaseForm = ({
                 type: Type.OBJECT,
                 properties: {
                     supplierName: { type: Type.STRING },
+                    invoiceNo: { type: Type.STRING, description: 'The invoice or bill number found on the receipt.' },
                     date: { type: Type.STRING, description: 'Invoice date in YYYY-MM-DD format.' },
                     items: {
                         type: Type.ARRAY,
@@ -292,7 +304,16 @@ const PurchaseForm = ({
                 }
             };
             
-            const prompt = `You are an intelligent document parser for a pharmacy. Analyze the provided image of a purchase bill and extract the data into a structured JSON format according to the provided schema. The supplier name is usually at the top. The date should be in YYYY-MM-DD format. For each item in the table, extract its description, packaging, quantity, rate, MRP, discount percentage (default to 0 if not present), HSN code, batch number, expiry date (convert MM-YY or any other format to MM/YYYY), CGST percentage, and SGST percentage.`;
+            const prompt = `You are an intelligent document parser for a pharmacy. Analyze the provided image of a purchase bill and extract the data into a structured JSON format according to the provided schema. 
+            The supplier name is usually at the top. 
+            Extract the Invoice Number into the 'invoiceNo' field.
+            The date should be in YYYY-MM-DD format. 
+            For the items list:
+            1. Scrutinize the table in the image carefully.
+            2. Extract EVERY single row in the table as a separate item.
+            3. Do NOT repeat the first item's details for subsequent rows.
+            4. Ensure that the quantity, rate, and product name match each specific row in the image.
+            5. For each item, extract description, packaging, quantity, rate, MRP, discount percentage (default to 0 if not present), HSN code, batch number, expiry date (convert MM-YY or any other format to MM/YYYY), CGST percentage, and SGST percentage.`;
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
@@ -323,35 +344,54 @@ const PurchaseForm = ({
     };
     
     const handleConfirmAutofill = () => {
-      if (!autofilledData) return;
-
-      if (autofilledData.matchedSupplier) {
-          setSupplierId(autofilledData.matchedSupplier.id);
-      }
-      if (autofilledData.date) {
-          setDate(autofilledData.date);
-      }
-      
-      const newItemsFromAutofill = autofilledData.items
-          .filter((item: any) => item.matchedProduct)
-          .map((item: any) => ({
-              productId: item.matchedProduct.id,
-              quantity: item.quantity || 1,
-              packaging: item.packaging || '',
-              rate: item.rate || 0,
-              mrp: item.mrp || item.matchedProduct.mrp || 0,
-              discount: item.discount || 0,
-              hsnCode: item.hsnCode || '',
-              cgst: item.cgst || 0,
-              sgst: item.sgst || 0,
-              igst: 0,
-              batchNo: item.batchNo || '',
-              expiryDate: item.expiryDate || '',
-          }));
-
-      setItems(prev => [...prev, ...newItemsFromAutofill]);
-      setAutofilledData(null);
-    };
+        if (!autofilledData) return;
+    
+        if (autofilledData.matchedSupplier) {
+            setSupplierId(autofilledData.matchedSupplier.id);
+        }
+        if (autofilledData.date) {
+            setDate(autofilledData.date);
+        }
+        if (autofilledData.invoiceNo) {
+            setInvoiceNo(autofilledData.invoiceNo);
+        }
+        
+        const newItemsFromAutofill = autofilledData.items
+            .map((item: any) => {
+                let productInfo;
+                if (item.matchedProduct) {
+                  productInfo = item.matchedProduct;
+                } else {
+                  // This is a new product, add it first.
+                  const newProductData: Omit<Product, 'id'> = {
+                    name: item.productName,
+                    manufacturer: 'Unknown', // We can't know this from the bill
+                    shelfLocation: 'N/A', // User can update later
+                    stock: 0, // Stock will be added by the purchase logic
+                    mrp: item.mrp || 0,
+                  };
+                  productInfo = onAddProduct(newProductData);
+                }
+    
+                return {
+                    productId: productInfo.id,
+                    quantity: item.quantity || 1,
+                    packaging: item.packaging || '',
+                    rate: item.rate || 0,
+                    mrp: item.mrp || productInfo.mrp || 0,
+                    discount: item.discount || 0,
+                    hsnCode: item.hsnCode || '',
+                    cgst: item.cgst || 0,
+                    sgst: item.sgst || 0,
+                    igst: 0,
+                    batchNo: item.batchNo || '',
+                    expiryDate: item.expiryDate || '',
+                };
+            });
+    
+        setItems(prev => [...prev, ...newItemsFromAutofill]);
+        setAutofilledData(null);
+      };
 
     const handleRejectAutofill = () => {
         setAutofilledData(null);
@@ -381,8 +421,8 @@ const PurchaseForm = ({
       {autofillError && <p className="text-sm text-red-500 text-center -mt-2">{autofillError}</p>}
 
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="md:col-span-1">
           <label className="block text-sm font-medium">Supplier</label>
           <select value={supplierId} onChange={e => setSupplierId(e.target.value)} className="mt-1 w-full p-2 bg-white border rounded-md" required>
             <option value="" disabled>Select a supplier</option>
@@ -392,6 +432,10 @@ const PurchaseForm = ({
         <div>
           <label className="block text-sm font-medium">Order Date</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1 w-full p-2 bg-white border rounded-md" required />
+        </div>
+        <div>
+            <label className="block text-sm font-medium">Invoice No</label>
+            <input type="text" value={invoiceNo} onChange={e => setInvoiceNo(e.target.value)} className="mt-1 w-full p-2 bg-white border rounded-md" />
         </div>
         <div>
             <label className="block text-sm font-medium">Payment Method</label>
@@ -529,11 +573,21 @@ interface PurchasesProps {
   suppliers: Supplier[];
   onAddSupplier: (supplier: Omit<Supplier, 'id'>) => void;
   onDeletePurchase: (purchaseId: string) => void;
+  onAddProduct: (product: Omit<Product, 'id'>) => Product;
 }
 
-const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplier, onDeletePurchase }: PurchasesProps) => {
+const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplier, onDeletePurchase, onAddProduct }: PurchasesProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewingPurchase, setViewingPurchase] = useState<Purchase | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const filteredPurchases = useMemo(() => {
+    return purchases.filter(p => 
+        p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.invoiceNo && p.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [purchases, searchTerm]);
 
   const handleSavePurchase = (purchase: Omit<Purchase, 'id' | 'paymentStatus' | 'paidAmount' | 'paymentHistory'>) => {
     onAddPurchase(purchase);
@@ -585,12 +639,22 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
       </div>
       
       <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
+        <div>
+          <input
+            type="text"
+            placeholder="Search by ID, Supplier or Invoice..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full max-w-sm p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left responsive-table">
             <thead className="text-xs uppercase bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3">Purchase ID</th>
                 <th scope="col" className="px-6 py-3">Supplier</th>
+                <th scope="col" className="px-6 py-3">Invoice No</th>
                 <th scope="col" className="px-6 py-3">Date</th>
                 <th scope="col" className="px-6 py-3">Payment</th>
                 <th scope="col" className="px-6 py-3 text-right">Total</th>
@@ -598,7 +662,7 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
               </tr>
             </thead>
             <tbody>
-              {purchases.map(purchase => (
+              {filteredPurchases.map(purchase => (
                 <tr key={purchase.id} className="bg-white border-b hover:bg-gray-50">
                   <td data-label="Purchase ID" className="px-6 py-4 font-medium whitespace-nowrap">
                     <button onClick={() => setViewingPurchase(purchase)} className="text-black font-medium hover:underline">
@@ -606,6 +670,7 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
                     </button>
                   </td>
                   <td data-label="Supplier" className="px-6 py-4">{purchase.supplierName}</td>
+                   <td data-label="Invoice No" className="px-6 py-4">{purchase.invoiceNo || '-'}</td>
                   <td data-label="Date" className="px-6 py-4">{new Date(purchase.date).toLocaleDateString()}</td>
                   <td data-label="Payment" className="px-6 py-4">{purchase.paymentMethod}</td>
                   <td data-label="Total" className="px-6 py-4 font-semibold text-right">₹{purchase.total.toFixed(2)}</td>
@@ -618,6 +683,7 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
               ))}
             </tbody>
           </table>
+          {filteredPurchases.length === 0 && <p className="text-center text-black py-4">No purchases found.</p>}
         </div>
       </div>
 
@@ -628,6 +694,7 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
             suppliers={suppliers}
             onSave={handleSavePurchase}
             onCancel={() => setIsModalOpen(false)}
+            onAddProduct={onAddProduct}
           />
         </Modal>
       )}
@@ -635,10 +702,14 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
       {viewingPurchase && (
         <Modal title={`Purchase Details (${viewingPurchase.id})`} onClose={() => setViewingPurchase(null)} size="6xl">
           <div className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                     <p className="text-sm font-medium text-gray-500">Supplier</p>
                     <p className="font-semibold text-black">{viewingPurchase.supplierName}</p>
+                </div>
+                <div>
+                    <p className="text-sm font-medium text-gray-500">Invoice No</p>
+                    <p className="font-semibold text-black">{viewingPurchase.invoiceNo || 'N/A'}</p>
                 </div>
                 <div>
                     <p className="text-sm font-medium text-gray-500">Date</p>
@@ -647,10 +718,6 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
                 <div>
                     <p className="text-sm font-medium text-gray-500">Payment Method</p>
                     <p className="font-semibold text-black">{viewingPurchase.paymentMethod}</p>
-                </div>
-                <div>
-                    <p className="text-sm font-medium text-gray-500">Total Orders</p>
-                    <p className="font-semibold text-black">₹{viewingPurchase.total.toFixed(2)}</p>
                 </div>
             </div>
 

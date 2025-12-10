@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Customer, Product } from '../types';
 import Modal from './Modal';
@@ -100,6 +101,14 @@ const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicin
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMedicineModalOpen, setIsMedicineModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone.includes(searchTerm)
+    );
+  }, [customers, searchTerm]);
 
   const handleSaveCustomer = (customer: Omit<Customer, 'id'>) => {
     onAddCustomer(customer);
@@ -124,6 +133,15 @@ const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicin
       </div>
 
       <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
+        <div>
+          <input
+            type="text"
+            placeholder="Search by name or phone..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full max-w-sm p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left responsive-table">
             <thead className="text-xs text-black uppercase bg-gray-50">
@@ -135,7 +153,7 @@ const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicin
               </tr>
             </thead>
             <tbody>
-              {customers.map(customer => (
+              {filteredCustomers.map(customer => (
                 <tr key={customer.id} className="bg-white border-b hover:bg-gray-50">
                   <td data-label="Name" className="px-6 py-4 font-medium text-black whitespace-nowrap">{customer.name}</td>
                   <td data-label="Phone" className="px-6 py-4">{customer.phone}</td>
@@ -155,6 +173,7 @@ const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicin
               ))}
             </tbody>
           </table>
+          {filteredCustomers.length === 0 && <p className="text-center text-black py-4">No customers found.</p>}
         </div>
       </div>
 

@@ -112,10 +112,11 @@ const App = () => {
   };
 
   // Product CRUD
-  const handleAddProduct = (product: Omit<Product, 'id'>) => {
+  const handleAddProduct = (product: Omit<Product, 'id'>): Product => {
     const newProduct: Product = { ...product, id: `PROD-${Date.now()}` };
     setProducts(prev => [newProduct, ...prev]);
     addLogEntry(`Added product: ${product.name}`);
+    return newProduct;
   };
   
   const handleUpdateProduct = (updatedProduct: Product) => {
@@ -254,7 +255,7 @@ const App = () => {
       case 'sales':
         return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} />;
       case 'purchases':
-        return <Purchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} />;
+        return <Purchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
       case 'pendingPayments':
         return <PendingPayments purchases={purchases.filter(p => p.paymentMethod === 'Credit')} onUpdatePayment={handleUpdatePurchasePayment} stockAmount={stockAmount} />;
       case 'customers':

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Sale } from '../types';
 import Modal from './Modal';
@@ -66,6 +67,14 @@ interface SalesProps {
 
 const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredSales = useMemo(() => {
+     return sales.filter(s => 
+        s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.date.includes(searchTerm)
+     );
+  }, [sales, searchTerm]);
 
   const handleSaveSale = (sale: Omit<Sale, 'id'>) => {
     onAddSale(sale);
@@ -101,6 +110,15 @@ const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
       </div>
 
       <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
+        <div>
+          <input
+            type="text"
+            placeholder="Search by ID or Date..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full max-w-sm p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left responsive-table">
             <thead className="text-xs text-black uppercase bg-gray-50">
@@ -114,7 +132,7 @@ const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
               </tr>
             </thead>
             <tbody>
-              {sales.map(sale => (
+              {filteredSales.map(sale => (
                 <tr key={sale.id} className="bg-white border-b hover:bg-gray-50">
                   <td data-label="Sale ID" className="px-6 py-4 font-medium text-black whitespace-nowrap">{sale.id}</td>
                   <td data-label="Date" className="px-6 py-4">{new Date(sale.date).toLocaleDateString()}</td>
@@ -130,6 +148,7 @@ const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
               ))}
             </tbody>
           </table>
+          {filteredSales.length === 0 && <p className="text-center text-black py-4">No sales found.</p>}
         </div>
       </div>
 

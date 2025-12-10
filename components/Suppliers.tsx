@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Supplier, Purchase } from '../types';
 import Modal from './Modal';
@@ -16,6 +17,15 @@ const Suppliers = ({ suppliers, purchases, onAddSupplier, onUpdateSupplier, onDe
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [historySupplier, setHistorySupplier] = useState<Supplier | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredSuppliers = useMemo(() => {
+    return suppliers.filter(s => 
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.phone.includes(searchTerm) ||
+      s.gstNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [suppliers, searchTerm]);
 
   const handleSaveSupplier = (supplier: Omit<Supplier, 'id'> | Supplier) => {
     if ('id' in supplier) {
@@ -74,6 +84,15 @@ const Suppliers = ({ suppliers, purchases, onAddSupplier, onUpdateSupplier, onDe
       </div>
 
       <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
+        <div>
+          <input
+            type="text"
+            placeholder="Search by name, phone or GST..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full max-w-sm p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left responsive-table">
             <thead className="text-xs text-black uppercase bg-gray-50">
@@ -87,7 +106,7 @@ const Suppliers = ({ suppliers, purchases, onAddSupplier, onUpdateSupplier, onDe
               </tr>
             </thead>
             <tbody>
-              {suppliers.map(supplier => (
+              {filteredSuppliers.map(supplier => (
                 <tr key={supplier.id} className="bg-white border-b hover:bg-gray-50">
                   <td data-label="Name" className="px-6 py-4 font-medium text-black whitespace-nowrap">
                      <button 
@@ -115,6 +134,7 @@ const Suppliers = ({ suppliers, purchases, onAddSupplier, onUpdateSupplier, onDe
               ))}
             </tbody>
           </table>
+          {filteredSuppliers.length === 0 && <p className="text-center text-black py-4">No suppliers found.</p>}
         </div>
       </div>
 
