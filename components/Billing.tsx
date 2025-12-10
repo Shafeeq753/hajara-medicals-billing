@@ -65,7 +65,7 @@ const NewBillForm = ({
             <label className="block text-sm font-medium">Add Product</label>
             <div className="flex items-center gap-2">
                 <select value={selectedProductIdToAdd} onChange={e => setSelectedProductIdToAdd(e.target.value)} className="mt-1 w-full p-2 bg-white border rounded-md">
-                    <option value="" disabled>Select a product to add (Stock > 0)</option>
+                    <option value="" disabled>Select a product to add (Stock &gt; 0)</option>
                     {availableProducts.map(p => <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>)}
                 </select>
                 <button type="button" onClick={handleAddProductClick} disabled={!selectedProductIdToAdd} className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400 mt-1 flex-shrink-0">
