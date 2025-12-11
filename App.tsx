@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill } from './types';
+import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill, CustomerMedicine } from './types';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Sales from './components/Sales';
@@ -85,9 +86,9 @@ const App = () => {
     addLogEntry(`Added customer: ${customer.name}`);
   };
 
-  const handleUpdateCustomerMedicines = (customerId: string, productIds: string[]) => {
+  const handleUpdateCustomerMedicines = (customerId: string, medicines: CustomerMedicine[]) => {
     setCustomers(prev => prev.map(c => 
-      c.id === customerId ? { ...c, usedProductIds: productIds } : c
+      c.id === customerId ? { ...c, medicines: medicines } : c
     ));
     const customerName = customers.find(c => c.id === customerId)?.name || 'Unknown';
     addLogEntry(`Updated medicines for customer: ${customerName}`);
