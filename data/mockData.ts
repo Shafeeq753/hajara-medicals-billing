@@ -14,32 +14,9 @@ export const DUMMY_PRODUCTS: Product[] = [
 ];
 
 export const DUMMY_CUSTOMERS: Customer[] = [
-  { 
-    id: 'CUST-001', 
-    name: 'John Doe', 
-    phone: '555-0101', 
-    address: '123 Maple St', 
-    medicines: [
-        { productId: 'PROD-001', dosage: '500mg', frequency: '1-0-1', duration: '5 days' },
-        { productId: 'PROD-005', dosage: '10ml', frequency: '0-0-1', duration: '3 days' }
-    ] 
-  },
-  { 
-    id: 'CUST-002', 
-    name: 'Jane Smith', 
-    phone: '555-0102', 
-    address: '456 Oak Ave', 
-    medicines: [
-        { productId: 'PROD-002', dosage: '75mg', frequency: '1-0-0', duration: '30 days' }
-    ] 
-  },
-  { 
-    id: 'CUST-003', 
-    name: 'Peter Jones', 
-    phone: '555-0103', 
-    address: '789 Pine Ln', 
-    medicines: [] 
-  },
+  { id: 'CUST-001', name: 'John Doe', phone: '555-0101', address: '123 Maple St', usedProductIds: ['PROD-001', 'PROD-005'] },
+  { id: 'CUST-002', name: 'Jane Smith', phone: '555-0102', address: '456 Oak Ave', usedProductIds: ['PROD-002'] },
+  { id: 'CUST-003', name: 'Peter Jones', phone: '555-0103', address: '789 Pine Ln', usedProductIds: [] },
 ];
 
 export const DUMMY_SUPPLIERS: Supplier[] = [
@@ -53,14 +30,14 @@ export const DUMMY_SALES: Sale[] = [
         id: 'SALE-001',
         date: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
         amount: 1500.00,
-        cashType: 'Cash',
+        bank: 0,
         savings: 150.00,
     },
     {
         id: 'SALE-002',
         date: new Date().toISOString().split('T')[0], // Today
         amount: 2350.50,
-        cashType: 'Bank',
+        bank: 2350.50,
         savings: 210.00,
     },
 ];

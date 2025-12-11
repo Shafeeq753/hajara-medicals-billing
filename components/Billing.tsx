@@ -323,6 +323,65 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
         resetForm();
     };
 
+    const handleDownloadPdf = () => {
+        if (!viewingBill) return;
+
+        const { jsPDF } = (window as any).jspdf;
+        const doc = new jsPDF();
+
+        // Add company details
+        doc.setFontSize(18);
+        doc.text('Hajara Medicals', 105, 15, { align: 'center' });
+        doc.setFontSize(10);
+        // Address Removed
+        doc.text('Phone: +91 88385 27121', 105, 22, { align: 'center' });
+
+        // Add bill details
+        doc.setFontSize(10);
+        doc.text(`Patient: ${viewingBill.patientName}`, 14, 35);
+        doc.text(`Doctor: ${viewingBill.doctorName || 'N/A'}`, 14, 40);
+        doc.text(`Bill No: ${viewingBill.billNumber}`, 140, 35);
+        doc.text(`Date: ${new Date(viewingBill.date).toLocaleDateString()}`, 140, 40);
+
+        // Add table
+        const tableColumn = ["S.No", "Product", "Qty", "MRP", "Total"];
+        const tableRows = viewingBill.items.map((item) => [
+            item.serialNumber,
+            item.productName,
+            item.quantity,
+            `Rs. ${item.mrp.toFixed(2)}`, // Changed to Rs.
+            `Rs. ${item.total.toFixed(2)}`, // Changed to Rs.
+        ]);
+
+        (doc as any).autoTable({
+            startY: 45,
+            head: [tableColumn],
+            body: tableRows,
+            theme: 'grid',
+            headStyles: { fillColor: [66, 66, 66] },
+            styles: { fontSize: 9 },
+        });
+
+        const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+        // Add totals
+        doc.text(`Sub Total:`, 140, finalY);
+        doc.text(`Rs. ${viewingBill.subTotal.toFixed(2)}`, 195, finalY, { align: 'right' }); // Changed to Rs.
+
+        doc.text(`Discount:`, 140, finalY + 5);
+        doc.text(`- Rs. ${viewingBill.overallDiscount.toFixed(2)}`, 195, finalY + 5, { align: 'right' }); // Changed to Rs.
+
+        doc.text(`Round Off:`, 140, finalY + 10);
+        doc.text(`Rs. ${viewingBill.roundOff.toFixed(2)}`, 195, finalY + 10, { align: 'right' }); // Changed to Rs.
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Grand Total:`, 140, finalY + 18);
+        doc.text(`Rs. ${viewingBill.grandTotal.toFixed(2)}`, 195, finalY + 18, { align: 'right' }); // Changed to Rs.
+
+        doc.save(`${viewingBill.billNumber}.pdf`);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -370,8 +429,8 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
                     <div className="space-y-4" id="bill-to-print">
                          <div className="text-center mb-4">
                             <h3 className="text-2xl font-bold text-black">Hajara Medicals</h3>
-                            <p className="text-sm">123 Main Street, Anytown</p>
-                            <p className="text-sm">Phone: 555-1234</p>
+                            {/* Address Removed */}
+                            <p className="text-sm">Phone: +91 88385 27121</p>
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm border-y py-2">
                             <p><span className="font-semibold">Patient:</span> {viewingBill.patientName}</p>
@@ -411,7 +470,8 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
                             </div>
                         </div>
                     </div>
-                     <div className="flex justify-end pt-4 border-t mt-4">
+                     <div className="flex justify-end pt-4 border-t mt-4 gap-2">
+                        <button type="button" onClick={handleDownloadPdf} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Download PDF</button>
                         <button type="button" onClick={() => setViewingBill(null)} className="px-4 py-2 bg-gray-200 rounded-md">Close</button>
                     </div>
                 </Modal>

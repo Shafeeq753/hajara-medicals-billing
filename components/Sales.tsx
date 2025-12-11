@@ -10,9 +10,9 @@ const SaleForm = ({ onSave, onCancel }: {
   onCancel: () => void;
 }) => {
   const [amount, setAmount] = useState('');
-  const [cashType, setCashType] = useState<'Cash' | 'Bank'>('Cash');
+  const [bank, setBank] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [savings, setSavings] = useState('');
+  const [savings, setSavings] = useState('0');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +22,7 @@ const SaleForm = ({ onSave, onCancel }: {
     }
     onSave({
       amount: parseFloat(amount),
-      cashType,
+      bank: parseFloat(bank) || 0,
       date,
       savings: parseFloat(savings) || 0,
     });
@@ -35,11 +35,8 @@ const SaleForm = ({ onSave, onCancel }: {
         <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required />
       </div>
       <div>
-        <label className="block text-sm font-medium text-black">Cash Type</label>
-        <select value={cashType} onChange={e => setCashType(e.target.value as 'Cash' | 'Bank')} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-          <option value="Cash">Cash</option>
-          <option value="Bank">Bank</option>
-        </select>
+        <label className="block text-sm font-medium text-black">Bank (₹)</label>
+        <input type="number" step="0.01" value={bank} onChange={e => setBank(e.target.value)} className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
       </div>
       <div>
         <label className="block text-sm font-medium text-black">Date</label>
@@ -126,7 +123,7 @@ const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
                 <th scope="col" className="px-6 py-3">Sale ID</th>
                 <th scope="col" className="px-6 py-3">Date</th>
                 <th scope="col" className="px-6 py-3 text-right">Amount</th>
-                <th scope="col" className="px-6 py-3">Cash Type</th>
+                <th scope="col" className="px-6 py-3 text-right">Bank</th>
                 <th scope="col" className="px-6 py-3 text-right">Savings</th>
                 <th scope="col" className="px-6 py-3 text-right">Actions</th>
               </tr>
@@ -137,7 +134,7 @@ const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
                   <td data-label="Sale ID" className="px-6 py-4 font-medium text-black whitespace-nowrap">{sale.id}</td>
                   <td data-label="Date" className="px-6 py-4">{new Date(sale.date).toLocaleDateString()}</td>
                   <td data-label="Amount" className="px-6 py-4 font-semibold text-black text-right">₹{sale.amount.toFixed(2)}</td>
-                  <td data-label="Cash Type" className="px-6 py-4">{sale.cashType}</td>
+                  <td data-label="Bank" className="px-6 py-4 text-black text-right">₹{sale.bank.toFixed(2)}</td>
                   <td data-label="Savings" className="px-6 py-4 text-black text-right">₹{sale.savings.toFixed(2)}</td>
                   <td data-label="Actions" className="px-6 py-4 text-right">
                     <button onClick={() => handleDeleteClick(sale.id)} className="text-black hover:text-black">

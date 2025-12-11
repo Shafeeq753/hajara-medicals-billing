@@ -14,19 +14,12 @@ export interface LogEntry {
   action: string;
 }
 
-export interface CustomerMedicine {
-  productId: string;
-  dosage: string;
-  frequency: string;
-  duration: string;
-}
-
 export interface Customer {
   id: string;
   name: string;
   phone: string;
   address: string;
-  medicines: CustomerMedicine[];
+  usedProductIds: string[];
 }
 
 export interface Supplier {
@@ -51,7 +44,7 @@ export interface Sale {
   id: string;
   date: string;
   amount: number;
-  cashType: 'Cash' | 'Bank';
+  bank: number;
   savings: number;
 }
 
