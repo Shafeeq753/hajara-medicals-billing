@@ -126,4 +126,4 @@ export interface ChatMessage {
   image?: string;
 }
 
-export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'customers' | 'products' | 'suppliers' | 'users' | 'history' | 'pendingPayments' | 'billing';
+export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'customers' | 'products' | 'suppliers' | 'reports' | 'users' | 'history' | 'pendingPayments' | 'billing';

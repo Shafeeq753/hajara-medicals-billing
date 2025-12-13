@@ -14,6 +14,9 @@ import Login from './components/Login';
 import Accounts from './components/Accounts';
 import PendingPayments from './components/PendingPayments';
 import Billing from './components/Billing';
+import Reports from './components/Reports';
+import Chatbot from './components/Chatbot';
+import { SparklesIcon } from './components/icons/Icons';
 import { DUMMY_CUSTOMERS, DUMMY_PRODUCTS, DUMMY_SALES, DUMMY_PURCHASES, DUMMY_SUPPLIERS, DUMMY_USERS } from './data/mockData';
 
 const App = () => {
@@ -31,6 +34,9 @@ const App = () => {
   const [users, setUsers] = useState<User[]>(() => JSON.parse(JSON.stringify(DUMMY_USERS)));
   const [historyLog, setHistoryLog] = useState<LogEntry[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  
+  // Chatbot State
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
 
   const addLogEntry = (action: string) => {
@@ -270,6 +276,8 @@ const App = () => {
         return <Suppliers suppliers={suppliers} purchases={purchases} onAddSupplier={handleAddSupplier} onUpdateSupplier={handleUpdateSupplier} onDeleteSupplier={handleDeleteSupplier} />;
       case 'products':
         return <Products products={products} purchases={purchases} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct} />;
+      case 'reports':
+        return <Reports sales={sales} purchases={purchases} bills={bills} logs={historyLog} products={products} />;
       case 'users':
         return <Users users={users.map(({password, ...rest}) => rest)} onAddUser={handleAddUser} />;
       case 'history':
@@ -287,15 +295,37 @@ const App = () => {
     <div className="bg-slate-50 min-h-screen font-sans">
        <div className="md:flex">
         <Header activeView={activeView} setActiveView={setActiveView} currentUser={currentUser} onLogout={handleLogout} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 relative">
            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-black p-4 mb-6 rounded-md shadow-sm" role="alert">
             <p className="font-bold">Demonstration Only</p>
             <p>All data is stored in-memory and will be lost upon refreshing the page.</p>
           </div>
           {renderContent()}
+          
+          {/* Chatbot Floating Action Button */}
+           <button
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            className="fixed bottom-6 right-6 p-4 bg-blue-600 text-white rounded-full shadow-2xl hover:bg-blue-700 transition-all duration-300 z-40 flex items-center justify-center group"
+            title="Ask AI Assistant"
+          >
+            <SparklesIcon />
+             <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-500 ease-in-out whitespace-nowrap">
+              Ask AI
+            </span>
+          </button>
+          
+          <Chatbot 
+            isOpen={isChatOpen} 
+            onClose={() => setIsChatOpen(false)}
+            sales={sales}
+            purchases={purchases}
+            products={products}
+            customers={customers}
+            suppliers={suppliers}
+            bills={bills}
+          />
         </main>
        </div>
-       {/* All Chatbot related components and buttons have been removed. */}
     </div>
   );
 };
