@@ -1,105 +1,187 @@
 
-import React, { useState, useMemo } from 'react';
-import { Customer, Product } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Customer, Product, CustomerMedicine } from '../types';
 import Modal from './Modal';
-import { PlusIcon } from './icons/Icons';
+import { PlusIcon, EditIcon } from './icons/Icons';
 import CustomerForm from './CustomerForm';
 
-interface ManageCustomerMedicinesProps {
+interface CustomerDetailsModalProps {
   customer: Customer;
   products: Product[];
-  onSave: (customerId: string, productIds: string[]) => void;
-  onCancel: () => void;
+  onSaveMedicines: (customerId: string, medicines: CustomerMedicine[]) => void;
+  onUpdateCustomer: (customer: Customer) => void;
+  onClose: () => void;
 }
 
-const ManageCustomerMedicines = ({ customer, products, onSave, onCancel }: ManageCustomerMedicinesProps) => {
-  const [usedIds, setUsedIds] = useState<string[]>(customer.usedProductIds || []);
-  const [selectedProductId, setSelectedProductId] = useState('');
+const CustomerDetailsModal = ({ customer, products, onSaveMedicines, onUpdateCustomer, onClose }: CustomerDetailsModalProps) => {
+    // Mode: 'view' or 'edit_details'
+    const [mode, setMode] = useState<'view' | 'edit_details'>('view');
+    
+    // Edit Details State
+    const [editName, setEditName] = useState(customer.name);
+    const [editPhone, setEditPhone] = useState(customer.phone);
+    const [editAddress, setEditAddress] = useState(customer.address);
 
-  const availableProducts = useMemo(() => {
-    return products.filter(p => !usedIds.includes(p.id));
-  }, [products, usedIds]);
+    // Medicines State
+    const [medicines, setMedicines] = useState<CustomerMedicine[]>(customer.medicines || []);
+    
+    // New Medicine Input State
+    const [selectedProductId, setSelectedProductId] = useState('');
+    const [dosage, setDosage] = useState('');
+    const [frequency, setFrequency] = useState('');
+    const [strength, setStrength] = useState('');
+    const [instructions, setInstructions] = useState('');
 
-  const handleAddMedicine = () => {
-    if (selectedProductId && !usedIds.includes(selectedProductId)) {
-      setUsedIds(prev => [...prev, selectedProductId]);
-      setSelectedProductId('');
-    }
-  };
+    const availableProducts = useMemo(() => {
+        const usedIds = medicines.map(m => m.productId);
+        return products.filter(p => !usedIds.includes(p.id));
+    }, [products, medicines]);
 
-  const handleRemoveMedicine = (productId: string) => {
-    setUsedIds(prev => prev.filter(id => id !== productId));
-  };
+    const handleAddMedicine = () => {
+        if (selectedProductId) {
+            const newMedicine: CustomerMedicine = {
+                productId: selectedProductId,
+                dosage,
+                frequency,
+                strength,
+                instructions
+            };
+            const updatedMedicines = [...medicines, newMedicine];
+            setMedicines(updatedMedicines);
+            onSaveMedicines(customer.id, updatedMedicines); // Auto-save medicines for smoother UX
+            
+            // Reset inputs
+            setSelectedProductId('');
+            setDosage('');
+            setFrequency('');
+            setStrength('');
+            setInstructions('');
+        }
+    };
 
-  const handleSave = () => {
-    onSave(customer.id, usedIds);
-    onCancel();
-  };
+    const handleRemoveMedicine = (productId: string) => {
+        const updatedMedicines = medicines.filter(m => m.productId !== productId);
+        setMedicines(updatedMedicines);
+        onSaveMedicines(customer.id, updatedMedicines);
+    };
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <h4 className="font-semibold text-black mb-2">Current Medicines:</h4>
-        <div className="flex flex-wrap gap-2 min-h-[40px]">
-          {usedIds.length > 0 ? (
-            usedIds.map(pid => {
-              const product = products.find(p => p.id === pid);
-              return (
-                <span key={pid} className="flex items-center bg-blue-100 text-black text-sm font-medium px-2.5 py-1 rounded-full">
-                  {product?.name || 'Unknown Product'}
-                  <button onClick={() => handleRemoveMedicine(pid)} className="ml-2 text-black hover:text-black font-bold">
-                    &times;
-                  </button>
-                </span>
-              );
-            })
-          ) : (
-            <p className="text-black px-2.5 py-1">No medicines assigned.</p>
-          )}
+    const handleUpdateDetails = () => {
+        onUpdateCustomer({
+            ...customer,
+            name: editName,
+            phone: editPhone,
+            address: editAddress
+        });
+        setMode('view');
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Customer Details Section */}
+            <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm relative">
+                <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-2">
+                    <h3 className="text-lg font-bold text-black">Details</h3>
+                     {mode === 'view' ? (
+                        <button onClick={() => setMode('edit_details')} className="text-black text-sm font-semibold hover:underline">Edit</button>
+                    ) : (
+                        <div className="space-x-3">
+                             <button onClick={() => setMode('view')} className="text-gray-500 text-sm font-medium hover:underline">Cancel</button>
+                             <button onClick={handleUpdateDetails} className="text-blue-600 text-sm font-bold hover:underline">Save</button>
+                        </div>
+                    )}
+                </div>
+                
+                {mode === 'view' ? (
+                    <div className="space-y-3 text-sm">
+                        <p><span className="font-bold text-black">Name:</span> {customer.name}</p>
+                        <p><span className="font-bold text-black">Phone:</span> {customer.phone}</p>
+                        <p><span className="font-bold text-black">Address:</span> {customer.address || 'N/A'}</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="Name" />
+                        <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="Phone" />
+                        <input type="text" value={editAddress} onChange={e => setEditAddress(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="Address" />
+                    </div>
+                )}
+            </div>
+
+            {/* Medicines Section */}
+            <div>
+                <h3 className="text-lg font-bold text-black mb-3">Medicines</h3>
+                
+                {/* List of Medicines */}
+                <div className="space-y-3 mb-6">
+                    {medicines.length > 0 ? (
+                        medicines.map((m, idx) => {
+                            const product = products.find(p => p.id === m.productId);
+                            return (
+                                <div key={m.productId} className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm relative">
+                                    <button onClick={() => handleRemoveMedicine(m.productId)} className="absolute top-2 right-3 text-black font-bold text-lg hover:text-red-500">
+                                        &times;
+                                    </button>
+                                    <p className="font-bold text-black pr-8 mb-2 text-base">{product?.name || 'Unknown Product'}</p>
+                                    <div className="grid grid-cols-2 gap-y-1 gap-x-2 text-xs sm:text-sm text-gray-700">
+                                        <p><span className="font-semibold text-gray-500">Power:</span> {m.strength || 'N/A'}</p>
+                                        <p><span className="font-semibold text-gray-500">Amount:</span> {m.dosage || 'N/A'}</p>
+                                        <p><span className="font-semibold text-gray-500">Take:</span> {m.frequency || 'N/A'}</p>
+                                        <p><span className="font-semibold text-gray-500">Note:</span> {m.instructions || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <p className="text-gray-500 italic text-sm">No medicines assigned.</p>
+                    )}
+                </div>
+
+                {/* Add Medicine Form */}
+                <div className="bg-blue-50 p-4 rounded-lg shadow-inner">
+                    <h4 className="font-semibold text-sm mb-3 text-black">Add Medicine</h4>
+                    <div className="space-y-3">
+                         <select 
+                                value={selectedProductId} 
+                                onChange={e => setSelectedProductId(e.target.value)}
+                                className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm text-black focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="" disabled>Select Product...</option>
+                                {availableProducts.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                        <input type="text" placeholder="Dosage (e.g. 1 tab)" value={dosage} onChange={e => setDosage(e.target.value)} className="w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input type="text" placeholder="Power (e.g. 500mg)" value={strength} onChange={e => setStrength(e.target.value)} className="w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input type="text" placeholder="When (e.g. Morning, Night)" value={frequency} onChange={e => setFrequency(e.target.value)} className="w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input type="text" placeholder="Notes (e.g. After food)" value={instructions} onChange={e => setInstructions(e.target.value)} className="w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <button 
+                        onClick={handleAddMedicine} 
+                        disabled={!selectedProductId}
+                        className="mt-4 w-full bg-blue-600 text-white font-semibold py-2.5 rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm transition-colors shadow-sm"
+                    >
+                        Add to List
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t mt-4">
+                <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-black rounded-md hover:bg-gray-300 font-medium text-sm">Close</button>
+            </div>
         </div>
-      </div>
-
-      <div className="border-t pt-4">
-        <h4 className="font-semibold text-black mb-2">Add New Medicine:</h4>
-        <div className="flex items-center gap-2">
-          <select 
-            value={selectedProductId} 
-            onChange={e => setSelectedProductId(e.target.value)}
-            className="flex-grow p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="" disabled>Select a product...</option>
-            {availableProducts.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <button 
-            onClick={handleAddMedicine}
-            disabled={!selectedProductId}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400"
-          >
-            Add
-          </button>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-        <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
-        <button type="button" onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Save Changes</button>
-      </div>
-    </div>
-  );
+    );
 };
+
 
 interface CustomersProps {
   customers: Customer[];
   onAddCustomer: (customer: Omit<Customer, 'id'>) => void;
   products: Product[];
-  onUpdateCustomerMedicines: (customerId: string, productIds: string[]) => void;
+  onUpdateCustomerMedicines: (customerId: string, medicines: CustomerMedicine[]) => void;
+  onUpdateCustomer: (customer: Customer) => void;
 }
 
-const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicines }: CustomersProps) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isMedicineModalOpen, setIsMedicineModalOpen] = useState(false);
+const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicines, onUpdateCustomer }: CustomersProps) => {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -112,12 +194,11 @@ const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicin
 
   const handleSaveCustomer = (customer: Omit<Customer, 'id'>) => {
     onAddCustomer(customer);
-    setIsModalOpen(false);
+    setIsAddModalOpen(false);
   }
   
-  const handleOpenMedicineModal = (customer: Customer) => {
+  const handleOpenDetails = (customer: Customer) => {
     setSelectedCustomer(customer);
-    setIsMedicineModalOpen(true);
   };
 
   return (
@@ -125,25 +206,45 @@ const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicin
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold text-black">Customers</h2>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => setIsAddModalOpen(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"
         >
-          <PlusIcon /> Add Customer
+          <PlusIcon /> <span className="hidden sm:inline">Add Customer</span>
         </button>
       </div>
 
-      <div className="bg-white p-2 md:p-6 rounded-xl shadow-lg">
-        <div>
-          <input
+      <div className="bg-white p-4 md:p-6 rounded-xl shadow-lg">
+        <input
             type="text"
             placeholder="Search by name or phone..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full max-w-sm p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-4"
-          />
+        />
+
+        {/* Mobile List View */}
+        <div className="md:hidden space-y-3">
+             {filteredCustomers.map(customer => (
+                 <div 
+                    key={customer.id} 
+                    onClick={() => handleOpenDetails(customer)}
+                    className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm active:bg-blue-50 cursor-pointer flex justify-between items-center"
+                 >
+                     <div>
+                         <p className="font-bold text-lg text-black">{customer.name}</p>
+                         <p className="text-sm text-gray-600">{customer.phone}</p>
+                     </div>
+                     <div className="text-blue-600 font-semibold text-sm">
+                         View & Edit &rarr;
+                     </div>
+                 </div>
+             ))}
+             {filteredCustomers.length === 0 && <p className="text-center text-gray-500 py-4">No customers found.</p>}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left responsive-table">
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm text-left">
             <thead className="text-xs text-black uppercase bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3">Name</th>
@@ -155,18 +256,18 @@ const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicin
             <tbody>
               {filteredCustomers.map(customer => (
                 <tr key={customer.id} className="bg-white border-b hover:bg-gray-50">
-                  <td data-label="Name" className="px-6 py-4 font-medium text-black whitespace-nowrap">{customer.name}</td>
-                  <td data-label="Phone" className="px-6 py-4">{customer.phone}</td>
-                  <td data-label="Medicines Used" className="px-6 py-4">
+                  <td className="px-6 py-4 font-medium text-black whitespace-nowrap">{customer.name}</td>
+                  <td className="px-6 py-4">{customer.phone}</td>
+                  <td className="px-6 py-4">
                     <span className="line-clamp-2">
-                        {customer.usedProductIds?.length > 0
-                          ? customer.usedProductIds.map(pid => products.find(p => p.id === pid)?.name).filter(Boolean).join(', ')
+                        {customer.medicines?.length > 0
+                          ? customer.medicines.map(m => products.find(p => p.id === m.productId)?.name).filter(Boolean).join(', ')
                           : 'None'}
                     </span>
                   </td>
-                   <td data-label="Actions" className="px-6 py-4 text-right">
-                    <button onClick={() => handleOpenMedicineModal(customer)} className="font-medium text-black hover:underline">
-                      Manage Medicines
+                   <td className="px-6 py-4 text-right">
+                    <button onClick={() => handleOpenDetails(customer)} className="font-medium text-blue-600 hover:underline">
+                      View/Edit Details
                     </button>
                   </td>
                 </tr>
@@ -177,19 +278,20 @@ const Customers = ({ customers, onAddCustomer, products, onUpdateCustomerMedicin
         </div>
       </div>
 
-      {isModalOpen && (
-        <Modal title="Add New Customer" onClose={() => setIsModalOpen(false)}>
-          <CustomerForm onSave={handleSaveCustomer} onCancel={() => setIsModalOpen(false)} products={products} />
+      {isAddModalOpen && (
+        <Modal title="Add New Customer" onClose={() => setIsAddModalOpen(false)} size="lg">
+          <CustomerForm onSave={handleSaveCustomer} onCancel={() => setIsAddModalOpen(false)} products={products} />
         </Modal>
       )}
 
-      {isMedicineModalOpen && selectedCustomer && (
-        <Modal title={`Medicines for ${selectedCustomer.name}`} onClose={() => setIsMedicineModalOpen(false)}>
-          <ManageCustomerMedicines
+      {selectedCustomer && (
+        <Modal title={`${selectedCustomer.name}`} onClose={() => setSelectedCustomer(null)} size="lg">
+          <CustomerDetailsModal
             customer={selectedCustomer}
             products={products}
-            onSave={onUpdateCustomerMedicines}
-            onCancel={() => setIsMedicineModalOpen(false)}
+            onSaveMedicines={onUpdateCustomerMedicines}
+            onUpdateCustomer={onUpdateCustomer}
+            onClose={() => setSelectedCustomer(null)}
           />
         </Modal>
       )}

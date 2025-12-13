@@ -14,12 +14,20 @@ export interface LogEntry {
   action: string;
 }
 
+export interface CustomerMedicine {
+  productId: string;
+  dosage: string; // e.g. 1 tablet
+  frequency: string; // e.g. Morning - Night
+  strength: string; // e.g. 500mg
+  instructions: string; // e.g. After food
+}
+
 export interface Customer {
   id: string;
   name: string;
   phone: string;
   address: string;
-  usedProductIds: string[];
+  medicines: CustomerMedicine[];
 }
 
 export interface Supplier {

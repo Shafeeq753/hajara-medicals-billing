@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill } from './types';
+import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill, CustomerMedicine } from './types';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Sales from './components/Sales';
@@ -85,13 +86,18 @@ const App = () => {
     addLogEntry(`Added customer: ${customer.name}`);
   };
 
-  const handleUpdateCustomerMedicines = (customerId: string, productIds: string[]) => {
+  const handleUpdateCustomerMedicines = (customerId: string, medicines: CustomerMedicine[]) => {
     setCustomers(prev => prev.map(c => 
-      c.id === customerId ? { ...c, usedProductIds: productIds } : c
+      c.id === customerId ? { ...c, medicines: medicines } : c
     ));
     const customerName = customers.find(c => c.id === customerId)?.name || 'Unknown';
     addLogEntry(`Updated medicines for customer: ${customerName}`);
   };
+
+  const handleUpdateCustomer = (updatedCustomer: Customer) => {
+    setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+    addLogEntry(`Updated details for customer: ${updatedCustomer.name}`);
+  }
 
   // Supplier CRUD
   const handleAddSupplier = (supplier: Omit<Supplier, 'id'>) => {
@@ -259,7 +265,7 @@ const App = () => {
       case 'pendingPayments':
         return <PendingPayments purchases={purchases.filter(p => p.paymentMethod === 'Credit')} onUpdatePayment={handleUpdatePurchasePayment} stockAmount={stockAmount} />;
       case 'customers':
-        return <Customers customers={customers} onAddCustomer={handleAddCustomer} products={products} onUpdateCustomerMedicines={handleUpdateCustomerMedicines} />;
+        return <Customers customers={customers} onAddCustomer={handleAddCustomer} products={products} onUpdateCustomerMedicines={handleUpdateCustomerMedicines} onUpdateCustomer={handleUpdateCustomer} />;
       case 'suppliers':
         return <Suppliers suppliers={suppliers} purchases={purchases} onAddSupplier={handleAddSupplier} onUpdateSupplier={handleUpdateSupplier} onDeleteSupplier={handleDeleteSupplier} />;
       case 'products':

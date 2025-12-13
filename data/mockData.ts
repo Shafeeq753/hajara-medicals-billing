@@ -14,9 +14,32 @@ export const DUMMY_PRODUCTS: Product[] = [
 ];
 
 export const DUMMY_CUSTOMERS: Customer[] = [
-  { id: 'CUST-001', name: 'John Doe', phone: '555-0101', address: '123 Maple St', usedProductIds: ['PROD-001', 'PROD-005'] },
-  { id: 'CUST-002', name: 'Jane Smith', phone: '555-0102', address: '456 Oak Ave', usedProductIds: ['PROD-002'] },
-  { id: 'CUST-003', name: 'Peter Jones', phone: '555-0103', address: '789 Pine Ln', usedProductIds: [] },
+  { 
+    id: 'CUST-001', 
+    name: 'John Doe', 
+    phone: '555-0101', 
+    address: '123 Maple St', 
+    medicines: [
+      { productId: 'PROD-001', dosage: '1 tablet', frequency: 'Morning, Night', strength: '500mg', instructions: 'After food' },
+      { productId: 'PROD-005', dosage: '5ml', frequency: 'Three times a day', strength: 'N/A', instructions: 'Shake well' }
+    ] 
+  },
+  { 
+    id: 'CUST-002', 
+    name: 'Jane Smith', 
+    phone: '555-0102', 
+    address: '456 Oak Ave', 
+    medicines: [
+      { productId: 'PROD-002', dosage: '1 tablet', frequency: 'Morning', strength: '75mg', instructions: 'Empty stomach' }
+    ] 
+  },
+  { 
+    id: 'CUST-003', 
+    name: 'Peter Jones', 
+    phone: '555-0103', 
+    address: '789 Pine Ln', 
+    medicines: [] 
+  },
 ];
 
 export const DUMMY_SUPPLIERS: Supplier[] = [

@@ -1,5 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import { Customer, Product } from '../types';
+import { Customer, Product, CustomerMedicine } from '../types';
 
 interface CustomerFormProps {
   onSave: (customer: Omit<Customer, 'id'>) => void;
@@ -11,22 +12,41 @@ const CustomerForm = ({ onSave, onCancel, products }: CustomerFormProps) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [usedProductIds, setUsedProductIds] = useState<string[]>([]);
+  const [medicines, setMedicines] = useState<CustomerMedicine[]>([]);
+  
+  // Medicine Input States
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [dosage, setDosage] = useState('');
+  const [frequency, setFrequency] = useState('');
+  const [strength, setStrength] = useState('');
+  const [instructions, setInstructions] = useState('');
 
   const availableProducts = useMemo(() => {
-    return products.filter(p => !usedProductIds.includes(p.id));
-  }, [products, usedProductIds]);
+    const usedIds = medicines.map(m => m.productId);
+    return products.filter(p => !usedIds.includes(p.id));
+  }, [products, medicines]);
 
   const handleAddMedicine = () => {
-    if (selectedProductId && !usedProductIds.includes(selectedProductId)) {
-      setUsedProductIds(prev => [...prev, selectedProductId]);
+    if (selectedProductId) {
+      const newMedicine: CustomerMedicine = {
+          productId: selectedProductId,
+          dosage,
+          frequency,
+          strength,
+          instructions
+      };
+      setMedicines(prev => [...prev, newMedicine]);
+      // Reset inputs
       setSelectedProductId('');
+      setDosage('');
+      setFrequency('');
+      setStrength('');
+      setInstructions('');
     }
   };
 
   const handleRemoveMedicine = (productId: string) => {
-    setUsedProductIds(prev => prev.filter(id => id !== productId));
+    setMedicines(prev => prev.filter(m => m.productId !== productId));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,7 +55,7 @@ const CustomerForm = ({ onSave, onCancel, products }: CustomerFormProps) => {
       alert("Name and Phone are required.");
       return;
     }
-    onSave({ name, phone, address, usedProductIds });
+    onSave({ name, phone, address, medicines });
   };
 
   return (
@@ -55,41 +75,68 @@ const CustomerForm = ({ onSave, onCancel, products }: CustomerFormProps) => {
       
       <div className="border-t pt-4">
         <h4 className="font-semibold text-black mb-2">Assign Medicines (Optional):</h4>
-        <div className="flex items-center gap-2 mb-2">
-          <select 
-            value={selectedProductId} 
-            onChange={e => setSelectedProductId(e.target.value)}
-            className="flex-grow p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="" disabled>Select a product to add...</option>
-            {availableProducts.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <button 
-            type="button"
-            onClick={handleAddMedicine}
-            disabled={!selectedProductId}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400"
-          >
-            Add
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2 p-2 bg-gray-50 rounded-md border">
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium">Product</label>
+            <select 
+                value={selectedProductId} 
+                onChange={e => setSelectedProductId(e.target.value)}
+                className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm"
+            >
+                <option value="" disabled>Select a product...</option>
+                {availableProducts.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+            </select>
+          </div>
+          <div>
+              <label className="block text-xs font-medium">Dosage</label>
+              <input type="text" placeholder="e.g. 1 tab" value={dosage} onChange={e => setDosage(e.target.value)} className="w-full p-2 bg-white border rounded-md text-sm" />
+          </div>
+          <div>
+               <label className="block text-xs font-medium">Strength/Power</label>
+               <input type="text" placeholder="e.g. 500mg" value={strength} onChange={e => setStrength(e.target.value)} className="w-full p-2 bg-white border rounded-md text-sm" />
+          </div>
+          <div>
+               <label className="block text-xs font-medium">Frequency</label>
+               <input type="text" placeholder="e.g. Morning, Night" value={frequency} onChange={e => setFrequency(e.target.value)} className="w-full p-2 bg-white border rounded-md text-sm" />
+          </div>
+           <div>
+               <label className="block text-xs font-medium">Instructions</label>
+               <input type="text" placeholder="e.g. After food" value={instructions} onChange={e => setInstructions(e.target.value)} className="w-full p-2 bg-white border rounded-md text-sm" />
+          </div>
+          <div className="sm:col-span-2 text-right">
+             <button 
+                type="button"
+                onClick={handleAddMedicine}
+                disabled={!selectedProductId}
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:bg-gray-400 text-sm"
+            >
+                Add Medicine
+            </button>
+          </div>
         </div>
-         <div className="flex flex-wrap gap-2 min-h-[40px] bg-gray-50 p-2 rounded-md">
-          {usedProductIds.length > 0 ? (
-            usedProductIds.map(pid => {
-              const product = products.find(p => p.id === pid);
+
+         <div className="space-y-2 mt-2">
+          {medicines.length > 0 ? (
+            medicines.map(m => {
+              const product = products.find(p => p.id === m.productId);
               return (
-                <span key={pid} className="flex items-center bg-blue-100 text-black text-sm font-medium px-2.5 py-1 rounded-full">
-                  {product?.name || 'Unknown'}
-                  <button onClick={() => handleRemoveMedicine(pid)} className="ml-2 text-black hover:text-black font-bold">
+                <div key={m.productId} className="flex justify-between items-center bg-blue-50 border border-blue-200 p-2 rounded-md">
+                   <div className="text-sm">
+                       <p className="font-semibold text-black">{product?.name || 'Unknown'}</p>
+                       <p className="text-xs text-gray-600">
+                           {m.strength && `${m.strength} • `}{m.dosage} • {m.frequency} • {m.instructions}
+                       </p>
+                   </div>
+                  <button onClick={() => handleRemoveMedicine(m.productId)} className="text-red-500 hover:text-red-700 font-bold px-2">
                     &times;
                   </button>
-                </span>
+                </div>
               );
             })
           ) : (
-            <p className="text-black px-2.5 py-1 text-sm">No medicines assigned.</p>
+            <p className="text-black text-sm p-2 text-center text-gray-500">No medicines added.</p>
           )}
         </div>
       </div>
