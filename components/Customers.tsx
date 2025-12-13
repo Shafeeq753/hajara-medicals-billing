@@ -76,29 +76,29 @@ const CustomerDetailsModal = ({ customer, products, onSaveMedicines, onUpdateCus
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             {/* Customer Details Section */}
-            <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm relative">
-                <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-2">
-                    <h3 className="text-lg font-bold text-black">Details</h3>
+            <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm relative">
+                <div className="flex justify-between items-start mb-2 border-b border-gray-100 pb-2">
+                    <h3 className="text-md font-bold text-black">Details</h3>
                      {mode === 'view' ? (
-                        <button onClick={() => setMode('edit_details')} className="text-black text-sm font-semibold hover:underline">Edit</button>
+                        <button onClick={() => setMode('edit_details')} className="text-black text-xs font-semibold hover:underline">Edit</button>
                     ) : (
-                        <div className="space-x-3">
-                             <button onClick={() => setMode('view')} className="text-gray-500 text-sm font-medium hover:underline">Cancel</button>
-                             <button onClick={handleUpdateDetails} className="text-blue-600 text-sm font-bold hover:underline">Save</button>
+                        <div className="space-x-2">
+                             <button onClick={() => setMode('view')} className="text-gray-500 text-xs font-medium hover:underline">Cancel</button>
+                             <button onClick={handleUpdateDetails} className="text-blue-600 text-xs font-bold hover:underline">Save</button>
                         </div>
                     )}
                 </div>
                 
                 {mode === 'view' ? (
-                    <div className="space-y-3 text-sm">
+                    <div className="space-y-1 text-sm">
                         <p><span className="font-bold text-black">Name:</span> {customer.name}</p>
                         <p><span className="font-bold text-black">Phone:</span> {customer.phone}</p>
                         <p><span className="font-bold text-black">Address:</span> {customer.address || 'N/A'}</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="Name" />
                         <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="Phone" />
                         <input type="text" value={editAddress} onChange={e => setEditAddress(e.target.value)} className="w-full p-2 border rounded text-sm" placeholder="Address" />
@@ -108,20 +108,20 @@ const CustomerDetailsModal = ({ customer, products, onSaveMedicines, onUpdateCus
 
             {/* Medicines Section */}
             <div>
-                <h3 className="text-lg font-bold text-black mb-3">Medicines</h3>
+                <h3 className="text-md font-bold text-black mb-2">Medicines</h3>
                 
                 {/* List of Medicines */}
-                <div className="space-y-3 mb-6">
+                <div className="space-y-2 mb-4">
                     {medicines.length > 0 ? (
                         medicines.map((m, idx) => {
                             const product = products.find(p => p.id === m.productId);
                             return (
-                                <div key={m.productId} className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm relative">
-                                    <button onClick={() => handleRemoveMedicine(m.productId)} className="absolute top-2 right-3 text-black font-bold text-lg hover:text-red-500">
+                                <div key={m.productId} className="bg-white border border-gray-200 p-3 rounded-lg shadow-sm relative">
+                                    <button onClick={() => handleRemoveMedicine(m.productId)} className="absolute top-2 right-2 text-black font-bold text-lg hover:text-red-500 leading-none">
                                         &times;
                                     </button>
-                                    <p className="font-bold text-black pr-8 mb-2 text-base">{product?.name || 'Unknown Product'}</p>
-                                    <div className="grid grid-cols-2 gap-y-1 gap-x-2 text-xs sm:text-sm text-gray-700">
+                                    <p className="font-bold text-black pr-6 mb-1 text-sm">{product?.name || 'Unknown Product'}</p>
+                                    <div className="grid grid-cols-2 gap-y-1 gap-x-2 text-xs text-gray-700">
                                         <p><span className="font-semibold text-gray-500">Power:</span> {m.strength || 'N/A'}</p>
                                         <p><span className="font-semibold text-gray-500">Amount:</span> {m.dosage || 'N/A'}</p>
                                         <p><span className="font-semibold text-gray-500">Take:</span> {m.frequency || 'N/A'}</p>
@@ -136,35 +136,37 @@ const CustomerDetailsModal = ({ customer, products, onSaveMedicines, onUpdateCus
                 </div>
 
                 {/* Add Medicine Form */}
-                <div className="bg-blue-50 p-4 rounded-lg shadow-inner">
-                    <h4 className="font-semibold text-sm mb-3 text-black">Add Medicine</h4>
-                    <div className="space-y-3">
-                         <select 
-                                value={selectedProductId} 
-                                onChange={e => setSelectedProductId(e.target.value)}
-                                className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm text-black focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="" disabled>Select Product...</option>
-                                {availableProducts.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
+                <div className="bg-blue-50 p-3 rounded-lg shadow-inner">
+                    <h4 className="font-semibold text-sm mb-2 text-black">Add Medicine</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                         <div className="col-span-2">
+                            <select 
+                                    value={selectedProductId} 
+                                    onChange={e => setSelectedProductId(e.target.value)}
+                                    className="w-full p-2 bg-white border border-gray-300 rounded-md text-sm text-black focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="" disabled>Select Product...</option>
+                                    {availableProducts.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
                             </select>
-                        <input type="text" placeholder="Dosage (e.g. 1 tab)" value={dosage} onChange={e => setDosage(e.target.value)} className="w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                        <input type="text" placeholder="Power (e.g. 500mg)" value={strength} onChange={e => setStrength(e.target.value)} className="w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                        <input type="text" placeholder="When (e.g. Morning, Night)" value={frequency} onChange={e => setFrequency(e.target.value)} className="w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                        <input type="text" placeholder="Notes (e.g. After food)" value={instructions} onChange={e => setInstructions(e.target.value)} className="w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                         </div>
+                        <input type="text" placeholder="Dosage (e.g. 1 tab)" value={dosage} onChange={e => setDosage(e.target.value)} className="col-span-1 w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input type="text" placeholder="Power (e.g. 500mg)" value={strength} onChange={e => setStrength(e.target.value)} className="col-span-1 w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input type="text" placeholder="When (e.g. Morning, Night)" value={frequency} onChange={e => setFrequency(e.target.value)} className="col-span-2 w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input type="text" placeholder="Notes (e.g. After food)" value={instructions} onChange={e => setInstructions(e.target.value)} className="col-span-2 w-full p-2 bg-white border border-gray-300 text-black placeholder-gray-500 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
                     <button 
                         onClick={handleAddMedicine} 
                         disabled={!selectedProductId}
-                        className="mt-4 w-full bg-blue-600 text-white font-semibold py-2.5 rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm transition-colors shadow-sm"
+                        className="mt-3 w-full bg-blue-600 text-white font-semibold py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm transition-colors shadow-sm"
                     >
                         Add to List
                     </button>
                 </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t mt-4">
+            <div className="flex justify-end pt-2 border-t mt-2">
                 <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-black rounded-md hover:bg-gray-300 font-medium text-sm">Close</button>
             </div>
         </div>
