@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { View } from '../types';
-import { DashboardIcon, AccountsIcon, CustomersIcon, MenuIcon, CloseIcon, ProductIcon, SupplierIcon, UserIcon, HistoryIcon, LogoutIcon, ReportIcon } from './icons/Icons';
+import { DashboardIcon, AccountsIcon, CustomersIcon, MenuIcon, CloseIcon, ProductIcon, SupplierIcon, UserIcon, HistoryIcon, LogoutIcon, ReportIcon, CashIcon } from './icons/Icons';
 import { User } from '../types';
 
 interface HeaderProps {
@@ -49,6 +49,7 @@ const Header = ({ activeView, setActiveView, currentUser, onLogout }: HeaderProp
       <nav className="flex-1 px-4 space-y-2">
         <NavItem view="dashboard" label="Dashboard" icon={<DashboardIcon />} active={activeView === 'dashboard'} onClick={handleNavClick} />
         <NavItem view="accounts" label="Accounts" icon={<AccountsIcon />} active={isAccountsActive} onClick={handleNavClick} />
+        <NavItem view="money" label="Money" icon={<CashIcon />} active={activeView === 'money'} onClick={handleNavClick} />
         <NavItem view="products" label="Products" icon={<ProductIcon />} active={activeView === 'products'} onClick={handleNavClick} />
         <NavItem view="suppliers" label="Suppliers" icon={<SupplierIcon />} active={activeView === 'suppliers'} onClick={handleNavClick} />
         <NavItem view="customers" label="Customers" icon={<CustomersIcon />} active={activeView === 'customers'} onClick={handleNavClick} />
@@ -80,7 +81,7 @@ const Header = ({ activeView, setActiveView, currentUser, onLogout }: HeaderProp
       </div>
 
       {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex flex-col w-64 h-screen bg-white border-r border-gray-200 shadow-lg">
+      <aside className="hidden md:flex flex-col w-64 h-screen bg-white border-r border-gray-200 shadow-lg shrink-0">
         {navContent}
       </aside>
 

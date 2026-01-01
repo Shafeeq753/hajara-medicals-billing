@@ -1,12 +1,12 @@
+
 import React from 'react';
 import { View } from '../types';
-import { PurchasesIcon, SalesIcon, PendingPaymentsIcon, BillingIcon } from './icons/Icons';
+import { PurchasesIcon, SalesIcon, PendingPaymentsIcon, BillingIcon, BoxIcon } from './icons/Icons';
 
 interface AccountsProps {
   setActiveView: (view: View) => void;
 }
 
-// FIX: Changed icon prop type from React.ReactNode to React.ReactElement to allow passing props via cloneElement.
 const ActionCard = ({ title, icon, onClick }: { title: string; icon: React.ReactElement; onClick: () => void; }) => (
     <button
         onClick={onClick}
@@ -15,7 +15,7 @@ const ActionCard = ({ title, icon, onClick }: { title: string; icon: React.React
         <div className="p-4 bg-blue-100 rounded-full text-blue-600">
             {React.cloneElement(icon, { className: "w-10 h-10" })}
         </div>
-        <p className="text-xl font-bold text-black">{title}</p>
+        <p className="text-xl font-bold text-black text-center">{title}</p>
     </button>
 );
 
@@ -30,6 +30,11 @@ const Accounts = ({ setActiveView }: AccountsProps) => {
           title="Manage Sales"
           icon={<SalesIcon />}
           onClick={() => setActiveView('sales')}
+        />
+        <ActionCard
+          title="Daily Purchases"
+          icon={<BoxIcon />}
+          onClick={() => setActiveView('dailyPurchases')}
         />
         <ActionCard
           title="Manage Purchases"

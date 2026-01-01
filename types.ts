@@ -1,5 +1,4 @@
 
-
 export interface User {
   id: string;
   name: string;
@@ -77,7 +76,8 @@ export interface PaymentRecord {
   id: string;
   date: string;
   amount: number;
-  screenshotUrl?: string; // Data URL of the uploaded image
+  source: 'Stock' | 'Bank';
+  screenshotUrl?: string; 
 }
 
 export interface Purchase {
@@ -120,10 +120,19 @@ export interface Bill {
   grandTotal: number;
 }
 
+export interface MoneyTransaction {
+  id: string;
+  date: string;
+  amount: number;
+  type: 'Stock' | 'Bank';
+  category: 'Adjustment' | 'Transfer' | 'Manual';
+  description: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   image?: string;
 }
 
-export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'customers' | 'products' | 'suppliers' | 'reports' | 'users' | 'history' | 'pendingPayments' | 'billing';
+export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'dailyPurchases' | 'customers' | 'products' | 'suppliers' | 'reports' | 'users' | 'history' | 'pendingPayments' | 'billing' | 'money';

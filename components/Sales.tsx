@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Sale } from '../types';
 import Modal from './Modal';
-import { PlusIcon, TrashIcon, CurrencyIcon } from './icons/Icons';
+import { PlusIcon, TrashIcon, CurrencyIcon, AccountsIcon } from './icons/Icons';
 
 // New Sale Form component for the modal
 const SaleForm = ({ onSave, onCancel }: {
@@ -60,9 +60,10 @@ interface SalesProps {
   onAddSale: (sale: Omit<Sale, 'id'>) => void;
   onDeleteSale: (saleId: string) => void;
   stockAmount: number;
+  bankBalance: number;
 }
 
-const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
+const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount, bankBalance }: SalesProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -96,13 +97,25 @@ const Sales = ({ sales, onAddSale, onDeleteSale, stockAmount }: SalesProps) => {
         </button>
       </div>
       
-      <div className={`p-6 rounded-xl shadow-lg flex items-center space-x-4 ${stockAmount >= 0 ? 'bg-white' : 'bg-red-50'}`}>
-        <div className={`p-3 rounded-full ${stockAmount >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-          <CurrencyIcon />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`p-6 rounded-xl shadow-lg flex items-center space-x-4 ${stockAmount >= 0 ? 'bg-white' : 'bg-red-50'}`}>
+          <div className={`p-3 rounded-full ${stockAmount >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+            <CurrencyIcon />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-black">Total Savings (Stock Amount)</p>
+            <p className={`text-2xl font-bold ${stockAmount >= 0 ? 'text-black' : 'text-red-600'}`}>₹{stockAmount.toFixed(2)}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium text-black">Total Savings (Stock Amount)</p>
-          <p className={`text-2xl font-bold ${stockAmount >= 0 ? 'text-black' : 'text-red-600'}`}>₹{stockAmount.toFixed(2)}</p>
+
+        <div className={`p-6 rounded-xl shadow-lg flex items-center space-x-4 ${bankBalance >= 0 ? 'bg-white' : 'bg-red-50'}`}>
+          <div className={`p-3 rounded-full ${bankBalance >= 0 ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
+            <AccountsIcon />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-black">Total Bank Balance</p>
+            <p className={`text-2xl font-bold ${bankBalance >= 0 ? 'text-black' : 'text-red-600'}`}>₹{bankBalance.toFixed(2)}</p>
+          </div>
         </div>
       </div>
 

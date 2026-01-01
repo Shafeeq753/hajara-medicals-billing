@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Purchase, PaymentRecord } from '../types';
 
@@ -11,6 +12,7 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
   const [paymentType, setPaymentType] = useState<'partial' | 'full'>('partial');
   const [amountPaid, setAmountPaid] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [source, setSource] = useState<'Stock' | 'Bank'>('Stock');
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [error, setError] = useState('');
 
@@ -58,6 +60,7 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
     const newPaymentRecord: Omit<PaymentRecord, 'id'> = {
         date: paymentDate,
         amount: amount,
+        source: source,
         ...(screenshot && { screenshotUrl: screenshot }),
     };
 
@@ -89,17 +92,30 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
             </div>
         </div>
 
-        <div>
-            <label className="block text-sm font-medium text-black">Amount Paid (₹)</label>
-            <input 
-                type="number" 
-                step="0.01" 
-                value={amountPaid} 
-                onChange={e => setAmountPaid(e.target.value)} 
-                className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" 
-                required
-                readOnly={paymentType === 'full'}
-             />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+              <label className="block text-sm font-medium text-black">Amount Paid (₹)</label>
+              <input 
+                  type="number" 
+                  step="0.01" 
+                  value={amountPaid} 
+                  onChange={e => setAmountPaid(e.target.value)} 
+                  className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" 
+                  required
+                  readOnly={paymentType === 'full'}
+              />
+          </div>
+          <div>
+              <label className="block text-sm font-medium text-black">Payment Source</label>
+              <select 
+                value={source} 
+                onChange={e => setSource(e.target.value as any)} 
+                className="mt-1 block w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+                  <option value="Stock">Savings (Stock)</option>
+                  <option value="Bank">Bank</option>
+              </select>
+          </div>
         </div>
 
         <div>

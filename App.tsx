@@ -1,11 +1,12 @@
 
 import React, { useState, useMemo } from 'react';
-import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill, CustomerMedicine } from './types';
+import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill, CustomerMedicine, MoneyTransaction } from './types';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Sales from './components/Sales';
 import Customers from './components/Customers';
 import Purchases from './components/Purchases';
+import DailyPurchases from './components/DailyPurchases';
 import Products from './components/Products';
 import Suppliers from './components/Suppliers';
 import Users from './components/Users';
@@ -15,6 +16,7 @@ import Accounts from './components/Accounts';
 import PendingPayments from './components/PendingPayments';
 import Billing from './components/Billing';
 import Reports from './components/Reports';
+import MoneyManagement from './components/MoneyManagement';
 import Chatbot from './components/Chatbot';
 import { SparklesIcon } from './components/icons/Icons';
 import { DUMMY_CUSTOMERS, DUMMY_PRODUCTS, DUMMY_SALES, DUMMY_PURCHASES, DUMMY_SUPPLIERS, DUMMY_USERS } from './data/mockData';
@@ -34,6 +36,7 @@ const App = () => {
   const [users, setUsers] = useState<User[]>(() => JSON.parse(JSON.stringify(DUMMY_USERS)));
   const [historyLog, setHistoryLog] = useState<LogEntry[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [moneyTransactions, setMoneyTransactions] = useState<MoneyTransaction[]>([]);
   
   // Chatbot State
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -57,7 +60,6 @@ const App = () => {
         const { password, ...userWithoutPassword } = user;
         setCurrentUser(userWithoutPassword);
         setLoginError(null);
-        // This is a special case, we log *after* setting the user
         const newLog: LogEntry = {
             id: `LOG-${Date.now()}`,
             timestamp: new Date().toISOString(),
@@ -84,7 +86,6 @@ const App = () => {
     setUsers(prev => [...prev, newUser]);
     addLogEntry(`Added new user: ${user.name}`);
   };
-
 
   const handleAddCustomer = (customer: Omit<Customer, 'id'>) => {
     const newCustomer: Customer = { ...customer, id: `CUST-${Date.now()}`};
@@ -149,10 +150,12 @@ const App = () => {
     addLogEntry(`Created sale ${newSale.id} (Amount: ₹${newSale.amount.toFixed(2)})`);
   };
 
-  const handleDeleteSale = (saleId: string) => {
-    const saleToDelete = sales.find(s => s.id === saleId);
-    if (!saleToDelete) return;
+  const handleUpdateSale = (updatedSale: Sale) => {
+    setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+    addLogEntry(`Updated sale ${updatedSale.id}`);
+  };
 
+  const handleDeleteSale = (saleId: string) => {
     setSales(prev => prev.filter(s => s.id !== saleId));
     addLogEntry(`Deleted sale ${saleId}`);
   };
@@ -164,10 +167,14 @@ const App = () => {
       id: `PUR-${Date.now()}`,
       paymentStatus: purchase.paymentMethod === 'Credit' ? 'Unpaid' : 'Paid',
       paidAmount: purchase.paymentMethod === 'Credit' ? 0 : purchase.total,
-      paymentHistory: [],
+      paymentHistory: purchase.paymentMethod === 'Credit' ? [] : [{
+        id: `PAY-INIT-${Date.now()}`,
+        date: purchase.date,
+        amount: purchase.total,
+        source: purchase.paymentMethod === 'Cash' ? 'Stock' : 'Bank'
+      }],
     };
     setPurchases(prev => [newPurchase, ...prev]);
-     // Update product stock and MRP
     setProducts(prevProducts => {
       const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
       newPurchase.items.forEach(item => {
@@ -186,7 +193,6 @@ const App = () => {
     const purchaseToDelete = purchases.find(p => p.id === purchaseId);
     if (!purchaseToDelete) return;
 
-    // Revert stock
     setProducts(prevProducts => {
         const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
         purchaseToDelete.items.forEach(item => {
@@ -209,7 +215,7 @@ const App = () => {
         const newStatus = newPaidAmount >= p.total ? 'Paid' : 'Partially Paid';
         const newHistory = [...p.paymentHistory, { ...paymentRecord, id: `PAY-${Date.now()}` }];
         
-        addLogEntry(`Recorded payment of ₹${paymentRecord.amount.toFixed(2)} for purchase ${p.id}. New status: ${newStatus}.`);
+        addLogEntry(`Recorded payment of ₹${paymentRecord.amount.toFixed(2)} from ${paymentRecord.source} for purchase ${p.id}.`);
 
         return {
           ...p,
@@ -222,15 +228,9 @@ const App = () => {
     }));
   };
 
-  // Bill Handlers
   const handleAddBill = (bill: Omit<Bill, 'id'>) => {
-    const newBill: Bill = {
-      ...bill,
-      id: `BILL-${Date.now()}`,
-    };
+    const newBill: Bill = { ...bill, id: `BILL-${Date.now()}` };
     setBills(prev => [newBill, ...prev]);
-
-    // Update product stock
     setProducts(prevProducts => {
       const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
       newBill.items.forEach(item => {
@@ -244,17 +244,68 @@ const App = () => {
     addLogEntry(`Created bill ${newBill.id} for ${newBill.patientName} (Total: ₹${newBill.grandTotal.toFixed(2)})`);
   };
 
+  const handleUpdateBill = (updatedBill: Bill) => {
+    setBills(prev => prev.map(b => b.id === updatedBill.id ? updatedBill : b));
+    addLogEntry(`Updated bill ${updatedBill.id}`);
+  };
+
+  const handleAddMoneyTransaction = (tx: Omit<MoneyTransaction, 'id'>) => {
+    const newTx: MoneyTransaction = { ...tx, id: `TX-${Date.now()}` };
+    setMoneyTransactions(prev => [newTx, ...prev]);
+    addLogEntry(`${tx.category} of ₹${tx.amount.toFixed(2)} in ${tx.type}`);
+  };
+
+  const handleUpdateMoneyTransaction = (updatedTx: MoneyTransaction) => {
+    setMoneyTransactions(prev => prev.map(tx => tx.id === updatedTx.id ? updatedTx : tx));
+    addLogEntry(`Updated ${updatedTx.category} entry ${updatedTx.id}`);
+  };
+
+  const handleDeleteMoneyTransaction = (txId: string) => {
+    setMoneyTransactions(prev => prev.filter(tx => tx.id !== txId));
+    addLogEntry(`Deleted money transaction ${txId}`);
+  };
+
+  const handleTransfer = (from: 'Stock' | 'Bank', to: 'Stock' | 'Bank', amount: number) => {
+    const ts = new Date().toISOString();
+    const txIdBase = Date.now();
+    const txFrom: MoneyTransaction = {
+      id: `TX-${txIdBase}-OUT`,
+      date: ts,
+      amount: -amount,
+      type: from,
+      category: 'Transfer',
+      description: `Transfer to ${to}`
+    };
+    const txTo: MoneyTransaction = {
+      id: `TX-${txIdBase}-IN`,
+      date: ts,
+      amount: amount,
+      type: to,
+      category: 'Transfer',
+      description: `Transfer from ${from}`
+    };
+    setMoneyTransactions(prev => [txFrom, txTo, ...prev]);
+    addLogEntry(`Transferred ₹${amount} from ${from} to ${to}`);
+  };
+
   const stockAmount = useMemo(() => {
     const totalSaleSavings = sales.reduce((sum, sale) => sum + sale.savings, 0);
-    const totalPurchasePayments = purchases.reduce((sum, purchase) => {
-        // For non-credit, the full amount is paid. For credit, use paidAmount.
-        if (purchase.paymentMethod !== 'Credit') {
-            return sum + purchase.total;
-        }
-        return sum + purchase.paidAmount;
+    const manualAdjustments = moneyTransactions.filter(t => t.type === 'Stock').reduce((sum, t) => sum + t.amount, 0);
+    const purchasePaymentsFromStock = purchases.reduce((sum, purchase) => {
+       return sum + purchase.paymentHistory.filter(pay => pay.source === 'Stock').reduce((paySum, pay) => paySum + pay.amount, 0);
     }, 0);
-    return totalSaleSavings - totalPurchasePayments;
-  }, [sales, purchases]);
+    return totalSaleSavings + manualAdjustments - purchasePaymentsFromStock;
+  }, [sales, moneyTransactions, purchases]);
+
+  const bankBalance = useMemo(() => {
+    const totalBankFromSales = sales.reduce((sum, sale) => sum + sale.bank, 0);
+    const totalBankFromBills = bills.reduce((sum, bill) => sum + bill.grandTotal, 0);
+    const manualAdjustments = moneyTransactions.filter(t => t.type === 'Bank').reduce((sum, t) => sum + t.amount, 0);
+    const purchasePaymentsFromBank = purchases.reduce((sum, purchase) => {
+        return sum + purchase.paymentHistory.filter(pay => pay.source === 'Bank').reduce((paySum, pay) => paySum + pay.amount, 0);
+    }, 0);
+    return totalBankFromSales + totalBankFromBills + manualAdjustments - purchasePaymentsFromBank;
+  }, [sales, bills, moneyTransactions, purchases]);
 
   const renderContent = () => {
     switch (activeView) {
@@ -262,10 +313,29 @@ const App = () => {
         return <Dashboard sales={sales} customers={customers} products={products} purchases={purchases} />;
       case 'accounts':
         return <Accounts setActiveView={setActiveView} />;
+      case 'money':
+        return (
+          <MoneyManagement 
+            moneyTransactions={moneyTransactions} 
+            sales={sales}
+            bills={bills}
+            purchases={purchases}
+            stockBalance={stockAmount}
+            bankBalance={bankBalance}
+            onAddTransaction={handleAddMoneyTransaction}
+            onUpdateTransaction={handleUpdateMoneyTransaction}
+            onDeleteTransaction={handleDeleteMoneyTransaction}
+            onUpdateSale={handleUpdateSale}
+            onUpdateBill={handleUpdateBill}
+            onTransfer={handleTransfer}
+          />
+        );
       case 'billing':
         return <Billing bills={bills} products={products} onAddBill={handleAddBill} />;
       case 'sales':
-        return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} />;
+        return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} bankBalance={bankBalance} />;
+      case 'dailyPurchases':
+        return <DailyPurchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
       case 'purchases':
         return <Purchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
       case 'pendingPayments':
@@ -296,13 +366,8 @@ const App = () => {
        <div className="md:flex">
         <Header activeView={activeView} setActiveView={setActiveView} currentUser={currentUser} onLogout={handleLogout} />
         <main className="flex-1 p-4 md:p-6 lg:p-8 relative">
-           <div className="bg-yellow-100 border-l-4 border-yellow-500 text-black p-4 mb-6 rounded-md shadow-sm" role="alert">
-            <p className="font-bold">Demonstration Only</p>
-            <p>All data is stored in-memory and will be lost upon refreshing the page.</p>
-          </div>
           {renderContent()}
           
-          {/* Chatbot Floating Action Button */}
            <button
             onClick={() => setIsChatOpen(!isChatOpen)}
             className="fixed bottom-6 right-6 p-4 bg-blue-600 text-white rounded-full shadow-2xl hover:bg-blue-700 transition-all duration-300 z-40 flex items-center justify-center group"
