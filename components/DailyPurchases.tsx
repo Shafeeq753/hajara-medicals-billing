@@ -177,11 +177,11 @@ const PurchaseForm = ({
         </div>
         <div>
           <label className="block text-sm font-bold mb-1">Invoice No</label>
-          <input type="text" value={invoiceNo} onChange={e => setInvoiceNo(e.target.value)} className="w-full p-2 border rounded-lg" />
+          <input type="text" value={invoiceNo} onChange={e => setInvoiceNo(e.target.value)} className="w-full p-2 border rounded-lg bg-white" />
         </div>
         <div>
           <label className="block text-sm font-bold mb-1">Date</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-2 border rounded-lg" />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-2 border rounded-lg bg-white" />
         </div>
       </div>
 
@@ -200,7 +200,7 @@ const PurchaseForm = ({
           <div className="grid grid-cols-2 gap-4 animate-fade-in">
               <div>
                   <label className="block text-sm font-bold mb-1">Payment Method</label>
-                  <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)} className="w-full p-2 border rounded-lg">
+                  <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)} className="w-full p-2 border rounded-lg bg-white">
                       <option value="Bank Transfer">Bank Transfer</option>
                       <option value="Cash">Cash (Stock)</option>
                   </select>
@@ -236,10 +236,10 @@ const PurchaseForm = ({
                   {items.map(item => (
                       <tr key={item.productId}>
                           <td className="px-4 py-3 font-bold">{products.find(p => p.id === item.productId)?.name}</td>
-                          <td className="px-4 py-3"><input type="number" value={item.quantity} onChange={e => updateItem(item.productId, 'quantity', e.target.value)} className="w-16 p-1 border rounded" /></td>
-                          <td className="px-4 py-3"><input type="number" value={item.rate} onChange={e => updateItem(item.productId, 'rate', e.target.value)} className="w-20 p-1 border rounded" /></td>
-                          <td className="px-4 py-3"><input type="text" value={item.batchNo} onChange={e => updateItem(item.productId, 'batchNo', e.target.value)} className="w-20 p-1 border rounded" /></td>
-                          <td className="px-4 py-3"><input type="text" placeholder="MM/YYYY" value={item.expiryDate} onChange={e => updateItem(item.productId, 'expiryDate', e.target.value)} className="w-20 p-1 border rounded" /></td>
+                          <td className="px-4 py-3"><input type="number" value={item.quantity} onChange={e => updateItem(item.productId, 'quantity', e.target.value)} className="w-16 p-1 border rounded bg-white" /></td>
+                          <td className="px-4 py-3"><input type="number" value={item.rate} onChange={e => updateItem(item.productId, 'rate', e.target.value)} className="w-20 p-1 border rounded bg-white" /></td>
+                          <td className="px-4 py-3"><input type="text" value={item.batchNo} onChange={e => updateItem(item.productId, 'batchNo', e.target.value)} className="w-20 p-1 border rounded bg-white" /></td>
+                          <td className="px-4 py-3"><input type="text" placeholder="MM/YYYY" value={item.expiryDate} onChange={e => updateItem(item.productId, 'expiryDate', e.target.value)} className="w-20 p-1 border rounded bg-white" /></td>
                           <td className="px-4 py-3 text-right font-bold">₹{(item.quantity * item.rate).toFixed(2)}</td>
                           <td className="px-4 py-3 text-center"><button type="button" onClick={() => setItems(items.filter(i => i.productId !== item.productId))} className="text-red-500"><TrashIcon /></button></td>
                       </tr>
@@ -253,7 +253,7 @@ const PurchaseForm = ({
           <div className="flex justify-between w-full max-w-xs"><span className="text-gray-500">GST:</span> <span className="font-bold">₹{totals.totalGst.toFixed(2)}</span></div>
           <div className="flex justify-between w-full max-w-xs items-center">
               <span className="text-gray-500">Round Off:</span> 
-              <input type="number" step="0.01" value={roundOff} onChange={e => setRoundOff(e.target.value)} className="w-20 p-1 border rounded text-right" />
+              <input type="number" step="0.01" value={roundOff} onChange={e => setRoundOff(e.target.value)} className="w-20 p-1 border rounded text-right bg-white" />
           </div>
           <div className="flex justify-between w-full max-w-xs border-t pt-2 text-xl"><span className="font-black">NET TOTAL:</span> <span className="font-black text-blue-700">₹{totals.net.toFixed(2)}</span></div>
       </div>

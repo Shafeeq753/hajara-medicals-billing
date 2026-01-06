@@ -186,7 +186,7 @@ const MoneyManagement = ({
               </div>
               <div>
                 <label className="block text-sm font-bold mb-2">Transfer Amount (₹)</label>
-                <input type="number" step="0.01" value={transferAmount} onChange={e => setTransferAmount(e.target.value)} className="w-full p-4 border rounded-xl text-xl font-bold focus:ring-2 focus:ring-blue-500" placeholder="0.00" required />
+                <input type="number" step="0.01" value={transferAmount} onChange={e => setTransferAmount(e.target.value)} className="w-full p-4 border rounded-xl text-xl font-bold focus:ring-2 focus:ring-blue-500 bg-white" placeholder="0.00" required />
               </div>
               <p className="text-sm text-gray-500 text-center">Transferring to <span className="font-bold text-black">{fromAccount === 'Stock' ? 'Bank' : 'Stock'}</span></p>
               <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-95 transition-all">Execute Transfer</button>
@@ -292,11 +292,11 @@ const MoneyManagement = ({
                 <p className="text-xs bg-blue-50 p-2 rounded text-blue-800">You are editing the financial breakdown for Sale: <b>{editingItem.id}</b></p>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Savings Component (₹)</label>
-                  <input type="number" step="0.01" value={saleSavings} onChange={e => setSaleSavings(e.target.value)} className="w-full p-2 border rounded-lg" required />
+                  <input type="number" step="0.01" value={saleSavings} onChange={e => setSaleSavings(e.target.value)} className="w-full p-2 border rounded-lg bg-white" required />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Bank Component (₹)</label>
-                  <input type="number" step="0.01" value={saleBank} onChange={e => setSaleBank(e.target.value)} className="w-full p-2 border rounded-lg" required />
+                  <input type="number" step="0.01" value={saleBank} onChange={e => setSaleBank(e.target.value)} className="w-full p-2 border rounded-lg bg-white" required />
                 </div>
               </div>
             ) : editingItem?.category === 'Bill' ? (
@@ -304,29 +304,29 @@ const MoneyManagement = ({
                 <p className="text-xs bg-blue-50 p-2 rounded text-blue-800">You are editing the total amount for Bill: <b>{editingItem.originalItem.billNumber}</b></p>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Grand Total (₹)</label>
-                  <input type="number" step="0.01" value={billTotal} onChange={e => setBillTotal(e.target.value)} className="w-full p-2 border rounded-lg" required />
+                  <input type="number" step="0.01" value={billTotal} onChange={e => setBillTotal(e.target.value)} className="w-full p-2 border rounded-lg bg-white" required />
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-2 border rounded-lg" required />
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full p-2 border rounded-lg bg-white" required />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Amount (₹)</label>
-                  <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full p-2 border rounded-lg text-lg font-bold" placeholder="0.00" required />
+                  <input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className="w-full p-2 border rounded-lg text-lg font-bold bg-white" placeholder="0.00" required />
                 </div>
                  <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Account</label>
-                  <select value={txType} onChange={e => setTxType(e.target.value as any)} className="w-full p-2 border rounded-lg">
+                  <select value={txType} onChange={e => setTxType(e.target.value as any)} className="w-full p-2 border rounded-lg bg-white">
                     <option value="Stock">Stock (Savings)</option>
                     <option value="Bank">Bank</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
-                  <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2 border rounded-lg" placeholder="Reason for adjustment..." required />
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2 border rounded-lg bg-white" placeholder="Reason for adjustment..." required />
                 </div>
               </div>
             )}
