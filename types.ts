@@ -100,6 +100,7 @@ export interface BillItem {
   productId: string;
   productName: string;
   expiryDate: string;
+  batchNo: string;
   quantity: number;
   packaging: string;
   mrp: number;

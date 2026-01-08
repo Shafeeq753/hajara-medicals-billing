@@ -41,7 +41,6 @@ const App = () => {
   // Chatbot State
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-
   const addLogEntry = (action: string) => {
     if (!currentUser) return;
     const newLog: LogEntry = {
@@ -60,14 +59,7 @@ const App = () => {
         const { password, ...userWithoutPassword } = user;
         setCurrentUser(userWithoutPassword);
         setLoginError(null);
-        const newLog: LogEntry = {
-            id: `LOG-${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            userId: user.id,
-            userName: user.name,
-            action: 'User logged in.',
-        };
-        setHistoryLog(prev => [newLog, ...prev]);
+        addLogEntry('User logged in.');
     } else {
         setLoginError('Invalid username or password.');
     }
@@ -161,48 +153,67 @@ const App = () => {
   };
 
   // Purchase Handlers
-  const handleAddPurchase = (purchase: Omit<Purchase, 'id' | 'paymentStatus' | 'paidAmount' | 'paymentHistory'>) => {
+  const handleAddPurchase = (purchaseData: any) => {
+    const { initialPaidAmount, ...purchase } = purchaseData;
+    
+    // Status Logic for Purchase Entry
+    const total = purchase.total;
+    const paidAmount = initialPaidAmount !== undefined ? (parseFloat(initialPaidAmount) || 0) : (purchase.paymentMethod === 'Credit' ? 0 : total);
+    
+    let status: 'Paid' | 'Partially Paid' | 'Unpaid' = 'Unpaid';
+    if (paidAmount >= total) status = 'Paid';
+    else if (paidAmount > 0) status = 'Partially Paid';
+    else status = 'Unpaid';
+
     const newPurchase: Purchase = {
       ...purchase,
       id: `PUR-${Date.now()}`,
-      paymentStatus: purchase.paymentMethod === 'Credit' ? 'Unpaid' : 'Paid',
-      paidAmount: purchase.paymentMethod === 'Credit' ? 0 : purchase.total,
-      paymentHistory: purchase.paymentMethod === 'Credit' ? [] : [{
+      paymentStatus: status,
+      paidAmount: paidAmount,
+      paymentHistory: paidAmount > 0 ? [{
         id: `PAY-INIT-${Date.now()}`,
         date: purchase.date,
-        amount: purchase.total,
+        amount: paidAmount,
         source: purchase.paymentMethod === 'Cash' ? 'Stock' : 'Bank'
-      }],
+      }] : [],
     };
+    
     setPurchases(prev => [newPurchase, ...prev]);
-    setProducts(prevProducts => {
-      const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
-      newPurchase.items.forEach(item => {
-          const product = productMap.get(item.productId);
-          if (product) {
-              product.stock += item.quantity;
-              product.mrp = item.mrp;
-          }
-      });
-      return Array.from(productMap.values());
-    });
-    addLogEntry(`Created purchase ${newPurchase.id} from ${newPurchase.supplierName} (Total: ₹${newPurchase.total.toFixed(2)})`);
+    
+    // Update stock if items exist
+    if (newPurchase.items && newPurchase.items.length > 0) {
+        setProducts(prevProducts => {
+          const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
+          newPurchase.items.forEach(item => {
+              const product = productMap.get(item.productId);
+              if (product) {
+                  product.stock += item.quantity;
+                  product.mrp = item.mrp;
+              }
+          });
+          return Array.from(productMap.values());
+        });
+    }
+
+    addLogEntry(`Created purchase ${newPurchase.id} from ${newPurchase.supplierName} (Total: ₹${newPurchase.total.toFixed(2)}, Paid: ₹${paidAmount.toFixed(2)})`);
   };
 
   const handleDeletePurchase = (purchaseId: string) => {
     const purchaseToDelete = purchases.find(p => p.id === purchaseId);
     if (!purchaseToDelete) return;
 
-    setProducts(prevProducts => {
-        const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
-        purchaseToDelete.items.forEach(item => {
-            const product = productMap.get(item.productId);
-            if (product) {
-                product.stock -= item.quantity;
-            }
+    if (purchaseToDelete.items && purchaseToDelete.items.length > 0) {
+        setProducts(prevProducts => {
+            const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
+            purchaseToDelete.items.forEach(item => {
+                const product = productMap.get(item.productId);
+                if (product) {
+                    product.stock -= item.quantity;
+                }
+            });
+            return Array.from(productMap.values());
         });
-        return Array.from(productMap.values());
-    });
+    }
     
     setPurchases(prev => prev.filter(p => p.id !== purchaseId));
     addLogEntry(`Deleted purchase ${purchaseId}`);
@@ -212,7 +223,12 @@ const App = () => {
     setPurchases(prev => prev.map(p => {
       if (p.id === purchaseId) {
         const newPaidAmount = p.paidAmount + paymentRecord.amount;
-        const newStatus = newPaidAmount >= p.total ? 'Paid' : 'Partially Paid';
+        // Correct status logic for installments
+        let newStatus: 'Paid' | 'Partially Paid' | 'Unpaid' = 'Unpaid';
+        if (newPaidAmount >= p.total) newStatus = 'Paid';
+        else if (newPaidAmount > 0) newStatus = 'Partially Paid';
+        else newStatus = 'Unpaid';
+        
         const newHistory = [...p.paymentHistory, { ...paymentRecord, id: `PAY-${Date.now()}` }];
         
         addLogEntry(`Recorded payment of ₹${paymentRecord.amount.toFixed(2)} from ${paymentRecord.source} for purchase ${p.id}.`);
@@ -335,11 +351,11 @@ const App = () => {
       case 'sales':
         return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} bankBalance={bankBalance} />;
       case 'dailyPurchases':
-        return <DailyPurchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
+        return <DailyPurchases purchases={purchases} onAddPurchase={handleAddPurchase} onUpdatePayment={handleUpdatePurchasePayment} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
       case 'purchases':
         return <Purchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
       case 'pendingPayments':
-        return <PendingPayments purchases={purchases.filter(p => p.paymentMethod === 'Credit')} onUpdatePayment={handleUpdatePurchasePayment} stockAmount={stockAmount} />;
+        return <PendingPayments purchases={purchases.filter(p => p.paymentMethod === 'Credit' || p.paymentStatus !== 'Paid')} onUpdatePayment={handleUpdatePurchasePayment} stockAmount={stockAmount} />;
       case 'customers':
         return <Customers customers={customers} onAddCustomer={handleAddCustomer} products={products} onUpdateCustomerMedicines={handleUpdateCustomerMedicines} onUpdateCustomer={handleUpdateCustomer} />;
       case 'suppliers':

@@ -77,8 +77,21 @@ const MoneyManagement = ({
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem) return;
+    
+    // If editingItem is null, it's a NEW manual entry (Adjustment)
+    if (!editingItem) {
+      onAddTransaction({ 
+        date, 
+        amount: parseFloat(amount) || 0, 
+        description, 
+        type: txType, 
+        category: 'Adjustment' 
+      });
+      resetForm();
+      return;
+    }
 
+    // Otherwise, handle the specific category update
     if (editingItem.category === 'Sale') {
       const updatedSale = { 
         ...editingItem.originalItem, 
@@ -99,15 +112,6 @@ const MoneyManagement = ({
         amount: parseFloat(amount) * (editingItem.amount < 0 ? -1 : 1), 
         description, 
         type: txType 
-      });
-    } else {
-      // New Adjustment
-      onAddTransaction({ 
-        date, 
-        amount: parseFloat(amount), 
-        description, 
-        type: txType, 
-        category: 'Adjustment' 
       });
     }
     resetForm();

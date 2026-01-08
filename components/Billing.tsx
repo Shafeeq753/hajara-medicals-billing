@@ -76,12 +76,13 @@ const NewBillForm = ({
 
         {/* Items Table */}
         <div className="overflow-x-auto max-h-[40vh] border-t border-b py-2">
-            <table className="w-full text-xs min-w-[1000px]">
+            <table className="w-full text-xs min-w-[1100px]">
                 <thead>
                     <tr className="border-b">
                         <th className="p-2 text-left">S.No</th>
                         <th className="p-2 text-left">Product</th>
                         <th className="p-2 text-left">Expiry</th>
+                        <th className="p-2 text-left">Batch No</th>
                         <th className="p-2 text-left">Qty</th>
                         <th className="p-2 text-left">Pkg</th>
                         <th className="p-2 text-left">MRP</th>
@@ -102,6 +103,7 @@ const NewBillForm = ({
                                 <td className="p-1">{index + 1}</td>
                                 <td className="p-1 font-medium whitespace-nowrap">{item.productName}</td>
                                 <td className="p-1"><input type="text" placeholder="MM/YYYY" value={item.expiryDate} onChange={e => updateItem(item.productId, 'expiryDate', e.target.value)} className="w-24 p-1 border bg-white rounded-md" /></td>
+                                <td className="p-1"><input type="text" placeholder="Batch" value={item.batchNo} onChange={e => updateItem(item.productId, 'batchNo', e.target.value)} className="w-24 p-1 border bg-white rounded-md" /></td>
                                 <td className="p-1"><input type="number" min="1" value={item.quantity} onChange={e => updateItem(item.productId, 'quantity', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
                                 <td className="p-1"><input type="text" value={item.packaging} onChange={e => updateItem(item.productId, 'packaging', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
                                 <td className="p-1"><input type="number" min="0" step="0.01" value={item.mrp} onChange={e => updateItem(item.productId, 'mrp', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
@@ -213,7 +215,6 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
     const [patientName, setPatientName] = useState('');
     const [doctorName, setDoctorName] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    // FIX: Simplified the complex type for the items state to prevent parsing errors.
     const [items, setItems] = useState<Omit<BillItem, 'serialNumber' | 'total'>[]>([]);
     const [selectedProductIdToAdd, setSelectedProductIdToAdd] = useState('');
     const [overallDiscount, setOverallDiscount] = useState('0');
@@ -258,6 +259,7 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
                 productId: productToAdd.id,
                 productName: productToAdd.name,
                 expiryDate: '',
+                batchNo: '',
                 quantity: 1,
                 packaging: '',
                 mrp: productToAdd.mrp,
@@ -297,6 +299,7 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
                 productId: item.productId,
                 productName: item.productName,
                 expiryDate: item.expiryDate,
+                batchNo: item.batchNo,
                 packaging: item.packaging,
                 quantity: quantity,
                 mrp: mrp,
@@ -333,7 +336,6 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
         doc.setFontSize(18);
         doc.text('Hajara Medicals', 105, 15, { align: 'center' });
         doc.setFontSize(10);
-        // Address Removed
         doc.text('Phone: +91 88385 27121', 105, 22, { align: 'center' });
 
         // Add bill details
@@ -344,13 +346,14 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
         doc.text(`Date: ${new Date(viewingBill.date).toLocaleDateString()}`, 140, 40);
 
         // Add table
-        const tableColumn = ["S.No", "Product", "Qty", "MRP", "Total"];
+        const tableColumn = ["S.No", "Product", "Batch", "Qty", "MRP", "Total"];
         const tableRows = viewingBill.items.map((item) => [
             item.serialNumber,
             item.productName,
+            item.batchNo || '-',
             item.quantity,
-            `Rs. ${item.mrp.toFixed(2)}`, // Changed to Rs.
-            `Rs. ${item.total.toFixed(2)}`, // Changed to Rs.
+            `Rs. ${item.mrp.toFixed(2)}`,
+            `Rs. ${item.total.toFixed(2)}`,
         ]);
 
         (doc as any).autoTable({
@@ -366,18 +369,18 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
 
         // Add totals
         doc.text(`Sub Total:`, 140, finalY);
-        doc.text(`Rs. ${viewingBill.subTotal.toFixed(2)}`, 195, finalY, { align: 'right' }); // Changed to Rs.
+        doc.text(`Rs. ${viewingBill.subTotal.toFixed(2)}`, 195, finalY, { align: 'right' });
 
         doc.text(`Discount:`, 140, finalY + 5);
-        doc.text(`- Rs. ${viewingBill.overallDiscount.toFixed(2)}`, 195, finalY + 5, { align: 'right' }); // Changed to Rs.
+        doc.text(`- Rs. ${viewingBill.overallDiscount.toFixed(2)}`, 195, finalY + 5, { align: 'right' });
 
         doc.text(`Round Off:`, 140, finalY + 10);
-        doc.text(`Rs. ${viewingBill.roundOff.toFixed(2)}`, 195, finalY + 10, { align: 'right' }); // Changed to Rs.
+        doc.text(`Rs. ${viewingBill.roundOff.toFixed(2)}`, 195, finalY + 10, { align: 'right' });
 
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text(`Grand Total:`, 140, finalY + 18);
-        doc.text(`Rs. ${viewingBill.grandTotal.toFixed(2)}`, 195, finalY + 18, { align: 'right' }); // Changed to Rs.
+        doc.text(`Rs. ${viewingBill.grandTotal.toFixed(2)}`, 195, finalY + 18, { align: 'right' });
 
         doc.save(`${viewingBill.billNumber}.pdf`);
     };
@@ -429,7 +432,6 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
                     <div className="space-y-4" id="bill-to-print">
                          <div className="text-center mb-4">
                             <h3 className="text-2xl font-bold text-black">Hajara Medicals</h3>
-                            {/* Address Removed */}
                             <p className="text-sm">Phone: +91 88385 27121</p>
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm border-y py-2">
@@ -444,6 +446,7 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
                                 <tr className="border-b">
                                     <th className="p-1 text-left">S.No</th>
                                     <th className="p-1 text-left">Product</th>
+                                    <th className="p-1 text-left">Batch</th>
                                     <th className="p-1 text-right">Qty</th>
                                     <th className="p-1 text-right">MRP</th>
                                     <th className="p-1 text-right">Total</th>
@@ -454,6 +457,7 @@ const Billing = ({ bills, products, onAddBill }: BillingProps) => {
                                     <tr key={item.serialNumber}>
                                         <td className="p-1">{item.serialNumber}</td>
                                         <td className="p-1">{item.productName}</td>
+                                        <td className="p-1">{item.batchNo || '-'}</td>
                                         <td className="p-1 text-right">{item.quantity}</td>
                                         <td className="p-1 text-right">₹{item.mrp.toFixed(2)}</td>
                                         <td className="p-1 text-right">₹{item.total.toFixed(2)}</td>
