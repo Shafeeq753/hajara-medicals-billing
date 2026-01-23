@@ -12,7 +12,7 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
   const [paymentType, setPaymentType] = useState<'partial' | 'full'>('partial');
   const [amountPaid, setAmountPaid] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [source, setSource] = useState<'Stock' | 'Bank'>('Stock');
+  const [source, setSource] = useState<'Stock' | 'Bank' | 'Savings'>('Stock');
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [error, setError] = useState('');
 
@@ -102,21 +102,21 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
         )}
       
         <div className="pt-2">
-            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Next Payment Mode</label>
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Payment Allocation</label>
             <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
                 <button 
                   type="button" 
                   onClick={() => handlePaymentTypeChange({ target: { value: 'partial' } } as any)} 
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${paymentType === 'partial' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${paymentType === 'partial' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
                 >
                   Pay Installment
                 </button>
                 <button 
                   type="button" 
                   onClick={() => handlePaymentTypeChange({ target: { value: 'full' } } as any)} 
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${paymentType === 'full' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${paymentType === 'full' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
                 >
-                  Pay Full Remaining
+                  Pay Full Balance
                 </button>
             </div>
         </div>
@@ -136,13 +136,14 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
               />
           </div>
           <div>
-              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Pay Through</label>
+              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Deduct From</label>
               <select 
                 value={source} 
                 onChange={e => setSource(e.target.value as any)} 
                 className="w-full p-3 border rounded-xl text-sm font-bold bg-white focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                  <option value="Stock">Cash (Stock)</option>
+                  <option value="Stock">Stock (Counter)</option>
+                  <option value="Savings">Savings Account</option>
                   <option value="Bank">Bank Transfer</option>
               </select>
           </div>
@@ -160,7 +161,7 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
         </div>
 
         <div>
-            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Receipt / Proof (Optional)</label>
+            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Receipt Proof (Optional)</label>
             <input 
                 type="file" 
                 accept="image/*"
@@ -169,7 +170,7 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
             />
             {screenshot && (
                 <div className="mt-2">
-                    <img src={screenshot} alt="Screenshot preview" className="max-h-24 rounded-lg border object-cover w-full" />
+                    <img src={screenshot} alt="Screenshot preview" className="max-h-24 rounded-lg border object-contain w-full bg-black" />
                 </div>
             )}
         </div>

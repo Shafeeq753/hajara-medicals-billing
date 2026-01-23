@@ -52,16 +52,18 @@ export const DUMMY_SALES: Sale[] = [
     {
         id: 'SALE-001',
         date: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
-        amount: 1500.00,
+        cash: 1350.00,
         bank: 0,
         savings: 150.00,
+        amount: 1500.00,
     },
     {
         id: 'SALE-002',
         date: new Date().toISOString().split('T')[0], // Today
-        amount: 2350.50,
-        bank: 2350.50,
+        cash: 0,
+        bank: 2140.50,
         savings: 210.00,
+        amount: 2350.50,
     },
 ];
 

@@ -139,7 +139,7 @@ const App = () => {
   const handleAddSale = (sale: Omit<Sale, 'id'>) => {
     const newSale = { ...sale, id: `SALE-${Date.now()}` };
     setSales(prev => [newSale, ...prev]);
-    addLogEntry(`Created sale ${newSale.id} (Amount: ₹${newSale.amount.toFixed(2)})`);
+    addLogEntry(`Created sale ${newSale.id} (Total: ₹${newSale.amount.toFixed(2)})`);
   };
 
   const handleUpdateSale = (updatedSale: Sale) => {
@@ -165,6 +165,12 @@ const App = () => {
     else if (paidAmount > 0) status = 'Partially Paid';
     else status = 'Unpaid';
 
+    const sourceMap: Record<string, 'Stock' | 'Bank' | 'Savings'> = {
+      'Cash': 'Stock',
+      'Bank Transfer': 'Bank',
+      'Savings': 'Savings'
+    };
+
     const newPurchase: Purchase = {
       ...purchase,
       id: `PUR-${Date.now()}`,
@@ -174,7 +180,7 @@ const App = () => {
         id: `PAY-INIT-${Date.now()}`,
         date: purchase.date,
         amount: paidAmount,
-        source: purchase.paymentMethod === 'Cash' ? 'Stock' : 'Bank'
+        source: sourceMap[purchase.paymentMethod] || 'Stock'
       }] : [],
     };
     
@@ -281,7 +287,7 @@ const App = () => {
     addLogEntry(`Deleted money transaction ${txId}`);
   };
 
-  const handleTransfer = (from: 'Stock' | 'Bank', to: 'Stock' | 'Bank', amount: number) => {
+  const handleTransfer = (from: 'Stock' | 'Bank' | 'Savings', to: 'Stock' | 'Bank' | 'Savings', amount: number) => {
     const ts = new Date().toISOString();
     const txIdBase = Date.now();
     const txFrom: MoneyTransaction = {
@@ -305,12 +311,21 @@ const App = () => {
   };
 
   const stockAmount = useMemo(() => {
-    const totalSaleSavings = sales.reduce((sum, sale) => sum + sale.savings, 0);
+    const totalSaleCash = sales.reduce((sum, sale) => sum + sale.cash, 0);
     const manualAdjustments = moneyTransactions.filter(t => t.type === 'Stock').reduce((sum, t) => sum + t.amount, 0);
     const purchasePaymentsFromStock = purchases.reduce((sum, purchase) => {
        return sum + purchase.paymentHistory.filter(pay => pay.source === 'Stock').reduce((paySum, pay) => paySum + pay.amount, 0);
     }, 0);
-    return totalSaleSavings + manualAdjustments - purchasePaymentsFromStock;
+    return totalSaleCash + manualAdjustments - purchasePaymentsFromStock;
+  }, [sales, moneyTransactions, purchases]);
+
+  const savingsBalance = useMemo(() => {
+    const totalSaleSavings = sales.reduce((sum, sale) => sum + sale.savings, 0);
+    const manualAdjustments = moneyTransactions.filter(t => t.type === 'Savings').reduce((sum, t) => sum + t.amount, 0);
+    const purchasePaymentsFromSavings = purchases.reduce((sum, purchase) => {
+        return sum + purchase.paymentHistory.filter(pay => pay.source === 'Savings').reduce((paySum, pay) => paySum + pay.amount, 0);
+    }, 0);
+    return totalSaleSavings + manualAdjustments - purchasePaymentsFromSavings;
   }, [sales, moneyTransactions, purchases]);
 
   const bankBalance = useMemo(() => {
@@ -326,7 +341,7 @@ const App = () => {
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard sales={sales} customers={customers} products={products} purchases={purchases} />;
+        return <Dashboard sales={sales} bills={bills} customers={customers} products={products} purchases={purchases} />;
       case 'accounts':
         return <Accounts setActiveView={setActiveView} />;
       case 'money':
@@ -338,6 +353,7 @@ const App = () => {
             purchases={purchases}
             stockBalance={stockAmount}
             bankBalance={bankBalance}
+            savingsBalance={savingsBalance}
             onAddTransaction={handleAddMoneyTransaction}
             onUpdateTransaction={handleUpdateMoneyTransaction}
             onDeleteTransaction={handleDeleteMoneyTransaction}
@@ -349,13 +365,13 @@ const App = () => {
       case 'billing':
         return <Billing bills={bills} products={products} onAddBill={handleAddBill} />;
       case 'sales':
-        return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} bankBalance={bankBalance} />;
+        return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} bankBalance={bankBalance} savingsBalance={savingsBalance} />;
       case 'dailyPurchases':
         return <DailyPurchases purchases={purchases} onAddPurchase={handleAddPurchase} onUpdatePayment={handleUpdatePurchasePayment} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
       case 'purchases':
         return <Purchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
       case 'pendingPayments':
-        return <PendingPayments purchases={purchases.filter(p => p.paymentMethod === 'Credit' || p.paymentStatus !== 'Paid')} onUpdatePayment={handleUpdatePurchasePayment} stockAmount={stockAmount} />;
+        return <PendingPayments purchases={purchases.filter(p => p.paymentMethod === 'Credit' || p.paymentStatus !== 'Paid')} onUpdatePayment={handleUpdatePurchasePayment} stockAmount={stockAmount} savingsBalance={savingsBalance} bankBalance={bankBalance} />;
       case 'customers':
         return <Customers customers={customers} onAddCustomer={handleAddCustomer} products={products} onUpdateCustomerMedicines={handleUpdateCustomerMedicines} onUpdateCustomer={handleUpdateCustomer} />;
       case 'suppliers':
@@ -369,7 +385,7 @@ const App = () => {
       case 'history':
         return <HistoryLog logs={historyLog} />;
       default:
-        return <Dashboard sales={sales} customers={customers} products={products} purchases={purchases} />;
+        return <Dashboard sales={sales} bills={bills} customers={customers} products={products} purchases={purchases} />;
     }
   };
 

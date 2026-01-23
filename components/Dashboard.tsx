@@ -1,5 +1,6 @@
+
 import React, { useMemo } from 'react';
-import { Sale, Customer, Product, Purchase, PurchaseItem } from '../types';
+import { Sale, Customer, Product, Purchase, PurchaseItem, Bill } from '../types';
 import { CurrencyIcon, UsersIcon, WarningIcon, BoxIcon, CalendarIcon } from './icons/Icons';
 
 interface DashboardProps {
@@ -7,6 +8,7 @@ interface DashboardProps {
   customers: Customer[];
   products: Product[];
   purchases: Purchase[];
+  bills: Bill[];
 }
 
 const StatCard = ({ title, value, icon, color }: { title: string; value: string | number; icon: React.ReactNode; color: string }) => (
@@ -21,10 +23,10 @@ const StatCard = ({ title, value, icon, color }: { title: string; value: string 
   </div>
 );
 
-const SalesChart = ({ sales }: { sales: Sale[] }) => {
-    const { salesByDay, dayLabels, maxSale } = useMemo(() => {
+const SalesChart = ({ sales, bills }: { sales: Sale[]; bills: Bill[] }) => {
+    const { revenueByDay, dayLabels, maxRevenue } = useMemo(() => {
         const today = new Date();
-        const salesByDay: number[] = Array(7).fill(0);
+        const revenueByDay: number[] = Array(7).fill(0);
         const days = Array(7).fill(0).map((_, i) => {
             const d = new Date();
             d.setDate(today.getDate() - i);
@@ -35,26 +37,34 @@ const SalesChart = ({ sales }: { sales: Sale[] }) => {
             const saleDate = new Date(sale.date).toISOString().split('T')[0];
             const index = days.indexOf(saleDate);
             if (index !== -1) {
-                salesByDay[index] += sale.amount;
+                revenueByDay[index] += sale.amount;
+            }
+        });
+
+        bills.forEach(bill => {
+            const billDate = new Date(bill.date).toISOString().split('T')[0];
+            const index = days.indexOf(billDate);
+            if (index !== -1) {
+                revenueByDay[index] += bill.grandTotal;
             }
         });
 
         const dayLabels = days.map(dStr => new Date(dStr + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short' }));
-        const maxSale = Math.max(...salesByDay, 1); // Avoid division by zero
+        const maxRevenue = Math.max(...revenueByDay, 1); // Avoid division by zero
 
-        return { salesByDay, dayLabels, maxSale };
-    }, [sales]);
+        return { revenueByDay, dayLabels, maxRevenue };
+    }, [sales, bills]);
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg">
-            <h3 className="text-xl font-semibold text-black mb-4">Sales (Last 7 Days)</h3>
+            <h3 className="text-xl font-semibold text-black mb-4">Revenue (Last 7 Days)</h3>
             <div className="flex justify-around items-end h-64 border-l border-b border-gray-200 pl-4 pb-4">
-                {salesByDay.map((amount, index) => (
+                {revenueByDay.map((amount, index) => (
                     <div key={index} className="flex flex-col items-center w-1/8">
                          <div className="text-xs font-bold text-black">₹{amount.toFixed(0)}</div>
                         <div
                             className="w-8 md:w-12 bg-blue-500 hover:bg-blue-600 rounded-t-md transition-all duration-300"
-                            style={{ height: `${(amount / maxSale) * 100}%` }}
+                            style={{ height: `${(amount / maxRevenue) * 100}%` }}
                             title={`₹${amount.toFixed(2)}`}
                         ></div>
                         <div className="mt-2 text-sm text-black">{dayLabels[index]}</div>
@@ -66,8 +76,13 @@ const SalesChart = ({ sales }: { sales: Sale[] }) => {
 };
 
 
-const Dashboard = ({ sales, customers, products, purchases }: DashboardProps) => {
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
+const Dashboard = ({ sales, customers, products, purchases, bills }: DashboardProps) => {
+  const totalRevenue = useMemo(() => {
+    const directSalesRevenue = sales.reduce((sum, sale) => sum + sale.amount, 0);
+    const billingRevenue = bills.reduce((sum, bill) => sum + bill.grandTotal, 0);
+    return directSalesRevenue + billingRevenue;
+  }, [sales, bills]);
+
   const totalCustomers = customers.length;
   const lowStockCount = products.filter(p => p.stock < 50).length;
 
@@ -123,7 +138,7 @@ const Dashboard = ({ sales, customers, products, purchases }: DashboardProps) =>
         />
       </div>
       
-      <SalesChart sales={sales} />
+      <SalesChart sales={sales} bills={bills} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-6 rounded-xl shadow-lg">
@@ -134,11 +149,11 @@ const Dashboard = ({ sales, customers, products, purchases }: DashboardProps) =>
                 <li key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-semibold text-black">{p.name}</p>
-                    <p className="text-sm text-black">{p.manufacturer}</p>
+                    <p className="text-sm text-gray-600">{p.manufacturer}</p>
                   </div>
                   <span className="font-bold text-black text-lg">{p.stock}</span>
                 </li>
-              )) : <p className="text-black">No products are low on stock.</p>}
+              )) : <p className="text-gray-500 italic">No products are low on stock.</p>}
             </ul>
           </div>
         </div>
@@ -151,11 +166,11 @@ const Dashboard = ({ sales, customers, products, purchases }: DashboardProps) =>
                 <li key={`${batch.productId}-${batch.batchNo}-${index}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                    <div>
                     <p className="font-semibold text-black">{batch.productName}</p>
-                    <p className="text-sm text-black">Batch: {batch.batchNo}</p>
+                    <p className="text-sm text-gray-600">Batch: {batch.batchNo}</p>
                   </div>
                   <span className="font-semibold text-black">{new Date(batch.expiryDate).toLocaleDateString()}</span>
                 </li>
-              )) : <p className="text-black">No products nearing expiry.</p>}
+              )) : <p className="text-gray-500 italic">No products nearing expiry.</p>}
             </ul>
           </div>
         </div>

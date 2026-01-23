@@ -50,9 +50,10 @@ export interface Product {
 export interface Sale {
   id: string;
   date: string;
-  amount: number;
+  cash: number;
   bank: number;
   savings: number;
+  amount: number; // total = cash + bank + savings
 }
 
 export interface PurchaseItem {
@@ -76,7 +77,7 @@ export interface PaymentRecord {
   id: string;
   date: string;
   amount: number;
-  source: 'Stock' | 'Bank';
+  source: 'Stock' | 'Bank' | 'Savings';
   screenshotUrl?: string; 
 }
 
@@ -86,7 +87,7 @@ export interface Purchase {
   supplierId: string;
   supplierName: string;
   date: string;
-  paymentMethod: 'Credit' | 'Cash' | 'Bank Transfer';
+  paymentMethod: 'Credit' | 'Cash' | 'Bank Transfer' | 'Savings';
   items: PurchaseItem[];
   roundOff?: number;
   total: number; // Grand total including taxes and round off
@@ -125,7 +126,7 @@ export interface MoneyTransaction {
   id: string;
   date: string;
   amount: number;
-  type: 'Stock' | 'Bank';
+  type: 'Stock' | 'Bank' | 'Savings';
   category: 'Adjustment' | 'Transfer' | 'Manual';
   description: string;
 }

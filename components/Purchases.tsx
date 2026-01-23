@@ -92,7 +92,7 @@ const PurchaseForm = ({
   const [supplierId, setSupplierId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [invoiceNo, setInvoiceNo] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'Credit' | 'Cash' | 'Bank Transfer'>('Credit');
+  const [paymentMethod, setPaymentMethod] = useState<'Credit' | 'Cash' | 'Bank Transfer' | 'Savings'>('Credit');
   const [items, setItems] = useState<Omit<PurchaseItem, 'amount' | 'productName'>[]>([]);
   const [selectedProductIdToAdd, setSelectedProductIdToAdd] = useState('');
   const [roundOff, setRoundOff] = useState('0');
@@ -129,15 +129,15 @@ const PurchaseForm = ({
         totalGst += discountedAmount * (gstPercentage / 100);
     });
 
-    const grandTotal = subTotal + totalGst;
+    const grandTotalValue = subTotal + totalGst;
     const roundOffValue = parseFloat(roundOff) || 0;
-    const netAmount = grandTotal + roundOffValue;
+    const netAmountValue = grandTotalValue + roundOffValue;
     
     return {
         subTotal,
         totalGst,
-        grandTotal,
-        netAmount,
+        grandTotal: grandTotalValue,
+        netAmount: netAmountValue,
     };
 }, [items, roundOff]);
 
@@ -197,23 +197,53 @@ const PurchaseForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supplierId || items.length === 0) {
-      alert('Please select a supplier and add at least one product.');
-      return;
+    if (!supplierId) {
+        alert('Please select a supplier.');
+        return;
     }
-
-    const isValidExpiry = (dateStr: string) => /^\d{2}\/\d{4}$/.test(dateStr.trim());
-    if (items.some(i => !i.batchNo || !isValidExpiry(i.expiryDate) || i.quantity <= 0 || i.rate <= 0)) {
-        alert('Please fill all required details (quantity, rate, batch no, and expiry date in MM/YYYY format) for each product.');
+    if (items.length === 0) {
+        alert('Please add at least one product.');
         return;
     }
 
-    const supplier = suppliers.find(s => s.id === supplierId);
-    if (!supplier) return;
+    const isValidExpiry = (dateStr: string) => /^\d{2}\/(\d{2}|\d{4})$/.test(dateStr.trim());
+    
+    for (const item of items) {
+        if (!item.batchNo) {
+            alert(`Please enter a Batch Number for all products.`);
+            return;
+        }
+        if (!isValidExpiry(item.expiryDate)) {
+            alert(`Please enter a valid Expiry Date (MM/YYYY or MM/YY) for all products.`);
+            return;
+        }
+        if (Number(item.quantity) <= 0) {
+            alert(`Quantity must be greater than zero.`);
+            return;
+        }
+        if (Number(item.rate) < 0) {
+            alert(`Rate cannot be negative.`);
+            return;
+        }
+    }
 
-    const fromMMYYYYtoYYYYMMDD = (mmYYYY: string) => {
-        const [month, year] = mmYYYY.split('/');
-        const lastDay = new Date(parseInt(year), parseInt(month, 10), 0).getDate();
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (!supplier) {
+        alert('Selected supplier not found.');
+        return;
+    }
+
+    const fromMMYYYYtoYYYYMMDD = (dateStr: string) => {
+        const parts = dateStr.split('/');
+        const month = parseInt(parts[0], 10);
+        let year = parseInt(parts[1], 10);
+        
+        // Handle 2-digit years
+        if (year < 100) {
+            year += 2000;
+        }
+        
+        const lastDay = new Date(year, month, 0).getDate();
         return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
     };
 
@@ -316,7 +346,7 @@ const PurchaseForm = ({
             5. For each item, extract description, packaging, quantity, rate, MRP, discount percentage (default to 0 if not present), HSN code, batch number, expiry date (convert MM-YY or any other format to MM/YYYY), CGST percentage, and SGST percentage.`;
 
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-3-flash-preview',
                 contents: { parts: [imagePart, { text: prompt }] },
                 config: {
                     responseMimeType: 'application/json',
@@ -440,9 +470,10 @@ const PurchaseForm = ({
         <div>
             <label className="block text-sm font-medium">Payment Method</label>
             <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)} className="mt-1 w-full p-2 bg-white border rounded-md" required>
-                <option value="Credit">Credit</option>
-                <option value="Cash">Cash</option>
+                <option value="Credit">Credit (Pay Later)</option>
+                <option value="Cash">Cash (Counter)</option>
                 <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Savings">Savings Reserve</option>
             </select>
         </div>
       </div>
@@ -500,13 +531,13 @@ const PurchaseForm = ({
                   <td className="p-1 font-medium whitespace-nowrap">{product?.name}</td>
                   <td className="p-1"><input type="text" value={item.packaging} onChange={e => updateItem(item.productId, 'packaging', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="number" min="1" value={item.quantity} onChange={e => updateItem(item.productId, 'quantity', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
-                  <td className="p-1"><input type="number" min="0.01" step="0.01" value={item.rate} onChange={e => updateItem(item.productId, 'rate', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="number" min="0" step="0.01" value={item.rate} onChange={e => updateItem(item.productId, 'rate', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1 font-semibold">{((Number(item.quantity) || 0) * (Number(item.rate) || 0)).toFixed(2)}</td>
                   <td className="p-1"><input type="number" min="0" step="0.01" value={item.mrp} onChange={e => updateItem(item.productId, 'mrp', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="number" min="0" step="0.01" value={item.discount} onChange={e => updateItem(item.productId, 'discount', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="text" value={item.hsnCode} onChange={e => updateItem(item.productId, 'hsnCode', e.target.value)} className="w-20 p-1 border bg-white rounded-md" /></td>
-                  <td className="p-1"><input type="text" value={item.batchNo} onChange={e => updateItem(item.productId, 'batchNo', e.target.value)} className="w-24 p-1 border bg-white rounded-md" /></td>
-                  <td className="p-1"><input type="text" placeholder="MM/YYYY" value={item.expiryDate} onChange={e => updateItem(item.productId, 'expiryDate', e.target.value)} className="w-24 p-1 border bg-white rounded-md" /></td>
+                  <td className="p-1"><input type="text" value={item.batchNo} onChange={e => updateItem(item.productId, 'batchNo', e.target.value)} className="w-24 p-1 border bg-white rounded-md" required /></td>
+                  <td className="p-1"><input type="text" placeholder="MM/YYYY" value={item.expiryDate} onChange={e => updateItem(item.productId, 'expiryDate', e.target.value)} className="w-24 p-1 border bg-white rounded-md" required /></td>
                   <td className="p-1"><input type="number" min="0" step="0.01" placeholder="e.g. 12" onChange={e => handleGstChange(item.productId, e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="number" min="0" step="0.01" value={item.cgst} onChange={e => updateItem(item.productId, 'cgst', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
                   <td className="p-1"><input type="number" min="0" step="0.01" value={item.sgst} onChange={e => updateItem(item.productId, 'sgst', e.target.value)} className="w-16 p-1 border bg-white rounded-md" /></td>
@@ -547,7 +578,7 @@ const PurchaseForm = ({
       
       <div className="flex justify-end gap-2 pt-4 border-t mt-4">
         <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded-md">Cancel</button>
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md">Save Purchase</button>
+        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-md font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95">Save Purchase</button>
       </div>
     </form>
     
@@ -603,24 +634,24 @@ const Purchases = ({ purchases, onAddPurchase, products, suppliers, onAddSupplie
   const purchaseTotals = useMemo(() => {
     if (!viewingPurchase) return { subTotal: 0, totalGst: 0, grandTotal: 0, netAmount: 0 };
     
-    let subTotal = 0;
-    let totalGst = 0;
+    let subTotalValue = 0;
+    let totalGstValue = 0;
 
     viewingPurchase.items.forEach(item => {
         const itemAmount = item.quantity * item.rate;
         const discountedAmount = itemAmount * (1 - (item.discount || 0) / 100);
-        subTotal += discountedAmount;
+        subTotalValue += discountedAmount;
         
         const gstPercentage = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
-        totalGst += discountedAmount * (gstPercentage / 100);
+        totalGstValue += discountedAmount * (gstPercentage / 100);
     });
 
-    const grandTotal = subTotal + totalGst;
+    const grandTotalValue = subTotalValue + totalGstValue;
     
     return {
-        subTotal,
-        totalGst,
-        grandTotal,
+        subTotal: subTotalValue,
+        totalGst: totalGstValue,
+        grandTotal: grandTotalValue,
         netAmount: viewingPurchase.total, // This is the final amount from data
     };
   }, [viewingPurchase]);
