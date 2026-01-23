@@ -367,9 +367,9 @@ const App = () => {
       case 'sales':
         return <Sales sales={sales} onAddSale={handleAddSale} onDeleteSale={handleDeleteSale} stockAmount={stockAmount} bankBalance={bankBalance} savingsBalance={savingsBalance} />;
       case 'dailyPurchases':
-        return <DailyPurchases purchases={purchases} onAddPurchase={handleAddPurchase} onUpdatePayment={handleUpdatePurchasePayment} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
+        return <DailyPurchases purchases={purchases} onAddPurchase={handleAddPurchase} onUpdatePayment={handleUpdatePurchasePayment} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} stockBalance={stockAmount} savingsBalance={savingsBalance} bankBalance={bankBalance} />;
       case 'purchases':
-        return <Purchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} />;
+        return <Purchases purchases={purchases} onAddPurchase={handleAddPurchase} products={products} suppliers={suppliers} onAddSupplier={handleAddSupplier} onDeletePurchase={handleDeletePurchase} onAddProduct={handleAddProduct} stockBalance={stockAmount} savingsBalance={savingsBalance} bankBalance={bankBalance} />;
       case 'pendingPayments':
         return <PendingPayments purchases={purchases.filter(p => p.paymentMethod === 'Credit' || p.paymentStatus !== 'Paid')} onUpdatePayment={handleUpdatePurchasePayment} stockAmount={stockAmount} savingsBalance={savingsBalance} bankBalance={bankBalance} />;
       case 'customers':

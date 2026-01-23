@@ -81,11 +81,8 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
     setIsLoading(true);
 
     try {
-      const apiKey = process.env.API_KEY; 
-      if (!apiKey) {
-        throw new Error("API Key not found. Please ensure it is configured correctly.");
-      }
-      const ai = new GoogleGenAI({ apiKey });
+      /* Initialize Gemini API directly using process.env.API_KEY as per guidelines */
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
       const systemInstruction = `You are an intelligent AI assistant for 'Hajara Medicals'. 
       You have access to the entire database of the shop in JSON format provided below.
@@ -114,8 +111,9 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
       }
       parts.push({ text: input || '(Analyze the image)' });
 
+      /* Use gemini-3-pro-preview for complex reasoning and data analysis tasks */
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-pro-preview',
         contents: { parts },
         config: {
             systemInstruction: systemInstruction

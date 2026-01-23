@@ -6,9 +6,15 @@ import Modal from './Modal';
 import PaymentForm from './PaymentForm';
 
 const PurchaseForm = ({
+  stockBalance,
+  savingsBalance,
+  bankBalance,
   onSave,
   onCancel,
 }: {
+  stockBalance: number;
+  savingsBalance: number;
+  bankBalance: number;
   onSave: (purchase: any) => void;
   onCancel: () => void;
 }) => {
@@ -19,6 +25,7 @@ const PurchaseForm = ({
   const [baseAmount, setBaseAmount] = useState('');
   const [roundOff, setRoundOff] = useState('0');
   const [partialPaidAmount, setPartialPaidAmount] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const netTotal = useMemo(() => {
     const amount = parseFloat(baseAmount) || 0;
@@ -34,16 +41,32 @@ const PurchaseForm = ({
 
   const balanceDue = netTotal - paidNowValue;
 
+  const currentAvailable = useMemo(() => {
+    return paymentMethod === 'Cash' ? stockBalance : paymentMethod === 'Savings' ? savingsBalance : bankBalance;
+  }, [paymentMethod, stockBalance, savingsBalance, bankBalance]);
+
+  const isInsufficient = useMemo(() => {
+    return (paymentChoice !== 'Later' && paidNowValue > currentAvailable);
+  }, [paymentChoice, paidNowValue, currentAvailable]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supplierName) return alert("Please enter a supplier name.");
-    if (!baseAmount || parseFloat(baseAmount) < 0) return alert("Please enter a valid bill amount.");
+    setErrorMessage('');
+
+    if (!supplierName) return setErrorMessage("Please enter a supplier name.");
+    if (!baseAmount || parseFloat(baseAmount) <= 0) return setErrorMessage("Please enter a valid bill amount.");
     
     if (paymentChoice === 'Partial' && (parseFloat(partialPaidAmount) <= 0 || !partialPaidAmount)) {
-        return alert("Please enter the amount you are paying partially.");
+        return setErrorMessage("Please enter the amount you are paying partially.");
     }
     if (paymentChoice === 'Partial' && paidNowValue > netTotal) {
-        return alert("Partial payment cannot exceed the total amount.");
+        return setErrorMessage("Partial payment cannot exceed the total amount.");
+    }
+
+    // Balance check
+    if (isInsufficient) {
+        setErrorMessage(`⚠️ Insufficient Funds! You only have ₹${currentAvailable.toFixed(2)} in ${paymentMethod === 'Cash' ? 'Stock' : paymentMethod}.`);
+        return;
     }
 
     onSave({
@@ -70,7 +93,7 @@ const PurchaseForm = ({
           <input 
             type="text" 
             value={supplierName} 
-            onChange={e => setSupplierName(e.target.value)} 
+            onChange={e => { setSupplierName(e.target.value); setErrorMessage(''); }} 
             className="w-full p-3 border rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none text-black" 
             placeholder="Select Supplier" 
             required 
@@ -95,9 +118,9 @@ const PurchaseForm = ({
                   <p className="text-xs text-gray-600">Choose where the money comes from.</p>
               </div>
               <div className="flex bg-white p-1 rounded-xl shadow-sm border overflow-hidden">
-                  <button type="button" onClick={() => setPaymentChoice('Full')} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${paymentChoice === 'Full' ? 'bg-blue-600 text-white shadow-lg' : 'text-black hover:bg-gray-50'}`}>Pay in Full</button>
-                  <button type="button" onClick={() => setPaymentChoice('Partial')} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${paymentChoice === 'Partial' ? 'bg-blue-600 text-white shadow-lg' : 'text-black hover:bg-gray-50'}`}>Pay Partial</button>
-                  <button type="button" onClick={() => setPaymentChoice('Later')} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${paymentChoice === 'Later' ? 'bg-blue-600 text-white shadow-lg' : 'text-black hover:bg-gray-50'}`}>Pay Later</button>
+                  <button type="button" onClick={() => { setPaymentChoice('Full'); setErrorMessage(''); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${paymentChoice === 'Full' ? 'bg-blue-600 text-white shadow-lg' : 'text-black hover:bg-gray-50'}`}>Pay in Full</button>
+                  <button type="button" onClick={() => { setPaymentChoice('Partial'); setErrorMessage(''); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${paymentChoice === 'Partial' ? 'bg-blue-600 text-white shadow-lg' : 'text-black hover:bg-gray-50'}`}>Pay Partial</button>
+                  <button type="button" onClick={() => { setPaymentChoice('Later'); setErrorMessage(''); }} className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all ${paymentChoice === 'Later' ? 'bg-blue-600 text-white shadow-lg' : 'text-black hover:bg-gray-50'}`}>Pay Later</button>
               </div>
           </div>
 
@@ -105,10 +128,10 @@ const PurchaseForm = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-blue-100 animate-fade-in">
                   <div>
                       <label className="block text-sm font-bold text-black mb-1">Fund Source</label>
-                      <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)} className="w-full p-3 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none text-black font-medium">
-                          <option value="Bank Transfer">Bank Account</option>
-                          <option value="Cash">Counter Cash (Stock)</option>
-                          <option value="Savings">Savings Reserve</option>
+                      <select value={paymentMethod} onChange={e => { setPaymentMethod(e.target.value as any); setErrorMessage(''); }} className="w-full p-3 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none text-black font-medium">
+                          <option value="Bank Transfer">Bank Account (₹{bankBalance.toFixed(2)})</option>
+                          <option value="Cash">Counter Cash (₹{stockBalance.toFixed(2)})</option>
+                          <option value="Savings">Savings Reserve (₹{savingsBalance.toFixed(2)})</option>
                       </select>
                   </div>
                   {paymentChoice === 'Partial' && (
@@ -118,7 +141,7 @@ const PurchaseForm = ({
                             type="number" 
                             step="0.01" 
                             value={partialPaidAmount} 
-                            onChange={e => setPartialPaidAmount(e.target.value)} 
+                            onChange={e => { setPartialPaidAmount(e.target.value); setErrorMessage(''); }} 
                             className="w-full p-3 border rounded-lg bg-white text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-black" 
                             placeholder="Enter amount" 
                             required
@@ -137,7 +160,7 @@ const PurchaseForm = ({
                       type="number" 
                       step="0.01" 
                       value={baseAmount} 
-                      onChange={e => setBaseAmount(e.target.value)} 
+                      onChange={e => { setBaseAmount(e.target.value); setErrorMessage(''); }} 
                       className="w-full p-4 border rounded-xl text-xl font-bold bg-white focus:ring-2 focus:ring-blue-500 outline-none text-black" 
                       placeholder="0.00" 
                       required
@@ -149,7 +172,7 @@ const PurchaseForm = ({
                       type="number" 
                       step="0.01" 
                       value={roundOff} 
-                      onChange={e => setRoundOff(e.target.value)} 
+                      onChange={e => { setRoundOff(e.target.value); setErrorMessage(''); }} 
                       className="w-full p-4 border rounded-xl text-xl font-bold bg-white focus:ring-2 focus:ring-blue-500 outline-none text-black" 
                       placeholder="0.00" 
                   />
@@ -172,15 +195,27 @@ const PurchaseForm = ({
           </div>
       </div>
 
+      {errorMessage && (
+        <div className="p-4 bg-red-100 border border-red-200 text-red-700 rounded-xl font-bold text-sm animate-pulse">
+            {errorMessage}
+        </div>
+      )}
+
       <div className="flex justify-end gap-3 pt-6 border-t">
         <button type="button" onClick={onCancel} className="px-8 py-3 bg-gray-100 rounded-xl font-bold transition-colors hover:bg-gray-200 text-black">Cancel</button>
-        <button type="submit" className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95">Record Entry</button>
+        <button 
+            type="submit" 
+            disabled={isInsufficient && paymentChoice !== 'Later'}
+            className={`px-8 py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 ${isInsufficient && paymentChoice !== 'Later' ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+        >
+            Record Entry
+        </button>
       </div>
     </form>
   );
 };
 
-const DailyPurchases = ({ purchases, onAddPurchase, onUpdatePayment, products, suppliers, onDeletePurchase }: any) => {
+const DailyPurchases = ({ purchases, onAddPurchase, onUpdatePayment, products, suppliers, onDeletePurchase, stockBalance, savingsBalance, bankBalance }: any) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [paymentModalPurchase, setPaymentModalPurchase] = useState<Purchase | null>(null);
     const [historyModalPurchase, setHistoryModalPurchase] = useState<Purchase | null>(null);
@@ -285,6 +320,9 @@ const DailyPurchases = ({ purchases, onAddPurchase, onUpdatePayment, products, s
             {isModalOpen && (
                 <Modal title="New Daily Entry" onClose={() => setIsModalOpen(false)} size="lg">
                     <PurchaseForm 
+                        stockBalance={stockBalance}
+                        savingsBalance={savingsBalance}
+                        bankBalance={bankBalance}
                         onSave={(data: any) => { onAddPurchase(data); setIsModalOpen(false); }} 
                         onCancel={() => setIsModalOpen(false)}
                     />
@@ -295,6 +333,9 @@ const DailyPurchases = ({ purchases, onAddPurchase, onUpdatePayment, products, s
                 <Modal title={`Adjust Payment: ${paymentModalPurchase.id.slice(-6)}`} onClose={() => setPaymentModalPurchase(null)}>
                     <PaymentForm
                         purchase={paymentModalPurchase}
+                        stockAmount={stockBalance}
+                        savingsBalance={savingsBalance}
+                        bankBalance={bankBalance}
                         onSave={handleSaveInstallment}
                         onCancel={() => setPaymentModalPurchase(null)}
                     />

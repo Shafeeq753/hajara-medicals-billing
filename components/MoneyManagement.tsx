@@ -38,6 +38,7 @@ const MoneyManagement = ({
   const [activeTab, setActiveTab] = useState<'stock' | 'savings' | 'bank' | 'transfer'>('stock');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [formError, setFormError] = useState('');
 
   // Form states for Adjustments
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -89,11 +90,23 @@ const MoneyManagement = ({
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     
+    const inputVal = parseFloat(amount) || 0;
+
     if (!editingItem) {
+      // Manual entries are usually positive, but if a user tries a negative adjustment:
+      if (inputVal < 0) {
+        const checkBalance = txType === 'Stock' ? stockBalance : txType === 'Savings' ? savingsBalance : bankBalance;
+        if (Math.abs(inputVal) > checkBalance) {
+            setFormError(`Insufficient funds in ${txType}. Balance: ₹${checkBalance.toFixed(2)}`);
+            return;
+        }
+      }
+
       onAddTransaction({ 
         date, 
-        amount: parseFloat(amount) || 0, 
+        amount: inputVal, 
         description, 
         type: txType, 
         category: 'Adjustment' 
@@ -117,10 +130,22 @@ const MoneyManagement = ({
       };
       onUpdateBill(updatedBill);
     } else if (editingItem.category === 'Adjustment' || editingItem.category === 'Transfer') {
+      const existingAmount = Math.abs(editingItem.amount);
+      const isDeduction = editingItem.amount < 0;
+      
+      if (isDeduction && inputVal > existingAmount) {
+         const currentBal = txType === 'Stock' ? stockBalance : txType === 'Savings' ? savingsBalance : bankBalance;
+         const difference = inputVal - existingAmount;
+         if (difference > currentBal) {
+            setFormError(`This adjustment would lead to a negative balance. Max allowed deduction increase: ₹${currentBal.toFixed(2)}`);
+            return;
+         }
+      }
+
       onUpdateTransaction({ 
         ...editingItem, 
         date, 
-        amount: parseFloat(amount) * (editingItem.amount < 0 ? -1 : 1), 
+        amount: inputVal * (isDeduction ? -1 : 1), 
         description, 
         type: txType 
       });
@@ -132,27 +157,46 @@ const MoneyManagement = ({
     e.preventDefault();
     const val = parseFloat(transferAmount);
     if (isNaN(val) || val <= 0) return;
+    
     if (fromAccount === toAccount) {
       alert("Source and Destination accounts must be different.");
       return;
     }
+
+    const available = fromAccount === 'Stock' ? stockBalance : fromAccount === 'Savings' ? savingsBalance : bankBalance;
+    if (val > available) {
+      alert(`⚠️ Insufficient funds! You only have ₹${available.toFixed(2)} in ${fromAccount}.`);
+      return;
+    }
+
     onTransfer(fromAccount, toAccount, val);
     setTransferAmount('');
   };
 
   const handleDelete = (tx: any) => {
     if (tx.id && (tx.category === 'Adjustment' || tx.category === 'Transfer')) {
+        // Only allow delete if it doesn't cause a negative balance elsewhere
+        // Usually deleting a positive adjustment is the risky part
+        if (tx.amount > 0) {
+            const currentBal = tx.type === 'Stock' ? stockBalance : tx.type === 'Savings' ? savingsBalance : bankBalance;
+            if (tx.amount > currentBal) {
+                alert(`⚠️ Cannot delete this entry. It would result in a negative ${tx.type} balance.`);
+                return;
+            }
+        }
+
         if (window.confirm("Are you sure you want to delete this manual adjustment?")) {
             onDeleteTransaction(tx.id);
         }
     } else {
-        alert("Standard Sale/Bill/Purchase records can only be deleted from their respective management tabs (Accounts > Manage Sales or Manage Bills).");
+        alert("Standard Sale/Bill/Purchase records can only be deleted from their respective management tabs.");
     }
   };
 
   const resetForm = () => {
     setEditingItem(null);
     setAmount('');
+    setFormError('');
     setDescription('');
     setSaleCash('');
     setSaleSavings('');
@@ -293,8 +337,8 @@ const MoneyManagement = ({
                   <tr>
                     <th className="px-6 py-4">Date</th>
                     <th className="px-6 py-4">Type</th>
-                    <th className="px-6 py-4">Details</th>
                     <th className="px-6 py-4 text-right">Amount</th>
+                    <th className="px-6 py-4">Details</th>
                     <th className="px-6 py-4 text-center">Actions</th>
                   </tr>
                 </thead>
@@ -312,10 +356,10 @@ const MoneyManagement = ({
                           {tx.category}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-800 font-medium">{tx.description}</td>
                       <td className={`px-6 py-4 text-right font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {tx.amount > 0 ? '+' : ''}₹{tx.amount.toFixed(2)}
                       </td>
+                      <td className="px-6 py-4 text-gray-800 font-medium">{tx.description}</td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex justify-center gap-1">
                           {tx.category !== 'Purchase' && (
@@ -393,6 +437,9 @@ const MoneyManagement = ({
                 </div>
               </div>
             )}
+            
+            {formError && <p className="text-xs font-bold text-red-600 bg-red-50 p-2 rounded border border-red-100">{formError}</p>}
+            
             <div className="flex justify-end gap-3 pt-4 border-t">
               <button type="button" onClick={resetForm} className="px-6 py-2 bg-gray-100 rounded-lg font-bold">Cancel</button>
               <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-all">

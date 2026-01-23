@@ -135,8 +135,12 @@ const PendingPayments = ({ purchases, onUpdatePayment, stockAmount, savingsBalan
 
             {paymentModalPurchase && (
                 <Modal title={`Pay Balance: ${paymentModalPurchase.id.slice(-8)}`} onClose={() => setPaymentModalPurchase(null)}>
+                    {/* Pass missing balance props to PaymentForm component */}
                     <PaymentForm
                         purchase={paymentModalPurchase}
+                        stockAmount={stockAmount}
+                        savingsBalance={savingsBalance}
+                        bankBalance={bankBalance}
                         onSave={handleSavePayment}
                         onCancel={() => setPaymentModalPurchase(null)}
                     />

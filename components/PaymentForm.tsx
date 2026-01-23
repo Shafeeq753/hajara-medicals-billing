@@ -4,11 +4,14 @@ import { Purchase, PaymentRecord } from '../types';
 
 interface PaymentFormProps {
   purchase: Purchase;
+  stockAmount: number;
+  savingsBalance: number;
+  bankBalance: number;
   onSave: (purchaseId: string, paymentRecord: Omit<PaymentRecord, 'id'>) => void;
   onCancel: () => void;
 }
 
-const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
+const PaymentForm = ({ purchase, stockAmount, savingsBalance, bankBalance, onSave, onCancel }: PaymentFormProps) => {
   const [paymentType, setPaymentType] = useState<'partial' | 'full'>('partial');
   const [amountPaid, setAmountPaid] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
@@ -52,6 +55,14 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
       setError(`Amount cannot be greater than the balance due of ₹${balanceDue.toFixed(2)}.`);
       return;
     }
+    
+    // Balance check
+    const available = source === 'Stock' ? stockAmount : source === 'Savings' ? savingsBalance : bankBalance;
+    if (amount > available) {
+        setError(`⚠️ Insufficient funds in ${source}! Current balance: ₹${available.toFixed(2)}`);
+        return;
+    }
+
     if (!paymentDate) {
         setError('Please select a payment date.');
         return;
@@ -142,9 +153,9 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
                 onChange={e => setSource(e.target.value as any)} 
                 className="w-full p-3 border rounded-xl text-sm font-bold bg-white focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                  <option value="Stock">Stock (Counter)</option>
-                  <option value="Savings">Savings Account</option>
-                  <option value="Bank">Bank Transfer</option>
+                  <option value="Stock">Stock (₹{stockAmount.toFixed(2)})</option>
+                  <option value="Savings">Savings (₹{savingsBalance.toFixed(2)})</option>
+                  <option value="Bank">Bank (₹{bankBalance.toFixed(2)})</option>
               </select>
           </div>
         </div>
@@ -175,7 +186,7 @@ const PaymentForm = ({ purchase, onSave, onCancel }: PaymentFormProps) => {
             )}
         </div>
         
-        {error && <p className="text-xs font-bold text-red-600 text-center bg-red-50 p-2 rounded-lg">{error}</p>}
+        {error && <p className="text-xs font-bold text-red-600 text-center bg-red-50 p-2 rounded-lg border border-red-100">{error}</p>}
         
         <div className="flex justify-end gap-2 pt-4 border-t mt-4">
             <button type="button" onClick={onCancel} className="px-6 py-2 bg-gray-100 text-black rounded-xl font-bold transition-colors hover:bg-gray-200">Cancel</button>
