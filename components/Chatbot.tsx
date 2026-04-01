@@ -115,9 +115,8 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
       }
       parts.push({ text: input || '(Analyze the image)' });
 
-      /* Use gemini-3-pro-preview for complex reasoning and data analysis tasks */
       const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-2.0-flash',
         contents: { parts },
         config: {
             systemInstruction: systemInstruction

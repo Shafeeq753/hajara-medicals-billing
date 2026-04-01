@@ -373,7 +373,7 @@ const PurchaseForm = ({
             5. For each item, extract description, packaging, quantity, rate, MRP, discount percentage (default to 0 if not present), HSN code, batch number, expiry date (convert MM-YY or any other format to MM/YYYY), CGST percentage, and SGST percentage.`;
 
             const response = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
+                model: 'gemini-2.0-flash',
                 contents: { parts: [imagePart, { text: prompt }] },
                 config: {
                     responseMimeType: 'application/json',
