@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Sale, Purchase, Product, Customer, Supplier, ChatMessage, Bill } from '../types';
 import { SendIcon, MicrophoneIcon, PaperclipIcon, CloseIcon, SpinnerIcon } from './icons/Icons';
@@ -22,16 +22,51 @@ interface ChatbotProps {
   bills: Bill[];
 }
 
+const buildCompactContext = (data: Omit<ChatbotProps, 'isOpen' | 'onClose'>) => {
+  const { sales, purchases, products, customers, suppliers, bills } = data;
+
+  const totalSalesRevenue = sales.reduce((s, r) => s + r.amount, 0);
+  const totalBillsRevenue = bills.reduce((s, b) => s + b.grandTotal, 0);
+  const totalPurchasesCost = purchases.reduce((s, p) => s + p.total, 0);
+  const lowStockProducts = products.filter(p => p.stock <= 5);
+  const unpaidPurchases = purchases.filter(p => p.paymentStatus !== 'Paid');
+
+  return `Summary:
+- Products: ${products.length} total, ${lowStockProducts.length} low stock (<=5)
+- Customers: ${customers.length}, Suppliers: ${suppliers.length}
+- Sales: ${sales.length} records, Total revenue: ₹${totalSalesRevenue.toFixed(2)}
+- Bills: ${bills.length} records, Total billed: ₹${totalBillsRevenue.toFixed(2)}
+- Combined revenue: ₹${(totalSalesRevenue + totalBillsRevenue).toFixed(2)}
+- Purchases: ${purchases.length} records, Total cost: ₹${totalPurchasesCost.toFixed(2)}
+- Unpaid/partial purchases: ${unpaidPurchases.length}
+
+Products: ${JSON.stringify(products.map(p => ({ id: p.id, name: p.name, stock: p.stock, mrp: p.mrp })))}
+
+Customers: ${JSON.stringify(customers.map(c => ({ id: c.id, name: c.name, phone: c.phone, medicines: c.medicines?.length || 0 })))}
+
+Suppliers: ${JSON.stringify(suppliers.map(s => ({ id: s.id, name: s.name, phone: s.phone })))}
+
+Recent Sales (last 20): ${JSON.stringify(sales.slice(0, 20).map(s => ({ id: s.id, date: s.date, amount: s.amount, cash: s.cash, bank: s.bank, savings: s.savings })))}
+
+Recent Bills (last 20): ${JSON.stringify(bills.slice(0, 20).map(b => ({ id: b.id, date: b.date, patient: b.patientName, total: b.grandTotal, items: b.items.length })))}
+
+Recent Purchases (last 20): ${JSON.stringify(purchases.slice(0, 20).map(p => ({ id: p.id, date: p.date, supplier: p.supplierName, total: p.total, status: p.paymentStatus, paid: p.paidAmount })))}
+
+Low Stock Alert: ${JSON.stringify(lowStockProducts.map(p => ({ name: p.name, stock: p.stock })))}`;
+};
+
 const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  
+
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  const compactContext = useMemo(() => buildCompactContext(appData), [appData.sales, appData.purchases, appData.products, appData.customers, appData.suppliers, appData.bills]);
 
   useEffect(() => {
     if (isOpen) {
@@ -73,19 +108,18 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
 
     const userMessage: ChatMessage = { role: 'user', text: input, ...(image && { image }) };
     setMessages(prev => [...prev, userMessage]);
-    
+
     setInput('');
     setImage(null);
     if (imageInputRef.current) imageInputRef.current.value = '';
-    
+
     setIsLoading(true);
 
     try {
-      /* Initialize Gemini API directly using process.env.API_KEY as per guidelines */
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
+
       const systemInstruction = `You are an intelligent AI assistant for 'Hajara Medicals'.
-      You have access to the entire database of the shop in JSON format provided below.
+      You have access to the shop's database summary below.
 
       IMPORTANT: Always address the user as "Thakkali 🍅". Use this name warmly and naturally in every response.
 
@@ -97,8 +131,7 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
 
       Current Date: ${new Date().toLocaleDateString()}
 
-      Database Context:
-      ${JSON.stringify(appData)}
+      ${compactContext}
 
       Instructions:
       - If asked about sales/revenue, combine data from 'sales' (direct sales) and 'bills' (billing section).
@@ -124,10 +157,13 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
       });
 
       setMessages(prev => [...prev, { role: 'model', text: response.text || "I couldn't generate a response." }]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gemini API Error:", error);
-      let errorMessage = "Sorry, I'm having trouble connecting to my brain right now.";
-      if (error instanceof Error) {
+      let errorMessage = "Sorry, I'm having trouble connecting right now.";
+      const msg = error?.message || '';
+      if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota')) {
+        errorMessage = "Hey Thakkali 🍅, the AI quota has been reached for today. Please try again tomorrow or check your Google AI API plan.";
+      } else if (error instanceof Error) {
         errorMessage = error.message;
       }
       setMessages(prev => [...prev, { role: 'model', text: errorMessage }]);
