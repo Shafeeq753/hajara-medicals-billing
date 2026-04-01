@@ -1,5 +1,8 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment } from 'firebase/firestore';
+import { db } from './firebase';
+import { useCollection } from './hooks/useFirestore';
 import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill, CustomerMedicine, MoneyTransaction } from './types';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
@@ -19,44 +22,50 @@ import Reports from './components/Reports';
 import MoneyManagement from './components/MoneyManagement';
 import Chatbot from './components/Chatbot';
 import { SparklesIcon } from './components/icons/Icons';
-import { DUMMY_CUSTOMERS, DUMMY_PRODUCTS, DUMMY_SALES, DUMMY_PURCHASES, DUMMY_SUPPLIERS, DUMMY_USERS } from './data/mockData';
 
 const App = () => {
   // Auth state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // App state
+  // App state — real-time from Firestore
   const [activeView, setActiveView] = useState<View>('dashboard');
-  const [customers, setCustomers] = useState<Customer[]>(DUMMY_CUSTOMERS);
-  const [products, setProducts] = useState<Product[]>(DUMMY_PRODUCTS);
-  const [sales, setSales] = useState<Sale[]>(DUMMY_SALES);
-  const [purchases, setPurchases] = useState<Purchase[]>(DUMMY_PURCHASES);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(DUMMY_SUPPLIERS);
-  const [users, setUsers] = useState<User[]>(() => JSON.parse(JSON.stringify(DUMMY_USERS)));
-  const [historyLog, setHistoryLog] = useState<LogEntry[]>([]);
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [moneyTransactions, setMoneyTransactions] = useState<MoneyTransaction[]>([]);
-  
+  const [customers, customersLoading] = useCollection<Customer>('customers');
+  const [products, productsLoading] = useCollection<Product>('products');
+  const [sales, salesLoading] = useCollection<Sale>('sales');
+  const [purchases, purchasesLoading] = useCollection<Purchase>('purchases');
+  const [suppliers, suppliersLoading] = useCollection<Supplier>('suppliers');
+  const [users, usersLoading] = useCollection<User>('users');
+  const [historyLog] = useCollection<LogEntry>('historyLog');
+  const [bills, billsLoading] = useCollection<Bill>('bills');
+  const [moneyTransactions] = useCollection<MoneyTransaction>('moneyTransactions');
+
   // Chatbot State
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  const addLogEntry = (action: string) => {
+  const dataLoading = customersLoading || productsLoading || salesLoading || purchasesLoading || suppliersLoading || usersLoading || billsLoading;
+
+  // Seed default user if Firestore users collection is empty
+  useEffect(() => {
+    if (!usersLoading && users.length === 0) {
+      addDoc(collection(db, 'users'), { name: 'thalif', password: 'thalif' });
+    }
+  }, [usersLoading, users.length]);
+
+  const addLogEntry = async (action: string) => {
     if (!currentUser) return;
-    const newLog: LogEntry = {
-      id: `LOG-${Date.now()}`,
+    await addDoc(collection(db, 'historyLog'), {
       timestamp: new Date().toISOString(),
       userId: currentUser.id,
       userName: currentUser.name,
       action: action,
-    };
-    setHistoryLog(prev => [newLog, ...prev]);
+    });
   };
 
   const handleLogin = (name: string, password: string) => {
     const user = users.find(u => u.name === name && u.password === password);
     if (user) {
-        const { password, ...userWithoutPassword } = user;
+        const { password: _, ...userWithoutPassword } = user;
         setCurrentUser(userWithoutPassword);
         setLoginError(null);
         addLogEntry('User logged in.');
@@ -73,97 +82,92 @@ const App = () => {
       }
   };
 
-  const handleAddUser = (user: Omit<User, 'id' | 'password'> & { password?: string }) => {
-    const newUser: User = { ...user, id: `USER-${Date.now()}`, password: user.password };
-    setUsers(prev => [...prev, newUser]);
+  const handleAddUser = async (user: Omit<User, 'id' | 'password'> & { password?: string }) => {
+    await addDoc(collection(db, 'users'), { name: user.name, password: user.password });
     addLogEntry(`Added new user: ${user.name}`);
   };
 
-  const handleAddCustomer = (customer: Omit<Customer, 'id'>) => {
-    const newCustomer: Customer = { ...customer, id: `CUST-${Date.now()}`};
-    setCustomers(prev => [...prev, newCustomer]);
+  const handleAddCustomer = async (customer: Omit<Customer, 'id'>) => {
+    await addDoc(collection(db, 'customers'), customer);
     addLogEntry(`Added customer: ${customer.name}`);
   };
 
-  const handleUpdateCustomerMedicines = (customerId: string, medicines: CustomerMedicine[]) => {
-    setCustomers(prev => prev.map(c => 
-      c.id === customerId ? { ...c, medicines: medicines } : c
-    ));
+  const handleUpdateCustomerMedicines = async (customerId: string, medicines: CustomerMedicine[]) => {
+    await updateDoc(doc(db, 'customers', customerId), { medicines });
     const customerName = customers.find(c => c.id === customerId)?.name || 'Unknown';
     addLogEntry(`Updated medicines for customer: ${customerName}`);
   };
 
-  const handleUpdateCustomer = (updatedCustomer: Customer) => {
-    setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+  const handleUpdateCustomer = async (updatedCustomer: Customer) => {
+    const { id, ...data } = updatedCustomer;
+    await updateDoc(doc(db, 'customers', id), data);
     addLogEntry(`Updated details for customer: ${updatedCustomer.name}`);
-  }
+  };
 
   // Supplier CRUD
-  const handleAddSupplier = (supplier: Omit<Supplier, 'id'>) => {
-    const newSupplier: Supplier = { ...supplier, id: `SUP-${Date.now()}` };
-    setSuppliers(prev => [...prev, newSupplier]);
+  const handleAddSupplier = async (supplier: Omit<Supplier, 'id'>) => {
+    await addDoc(collection(db, 'suppliers'), supplier);
     addLogEntry(`Added supplier: ${supplier.name}`);
   };
-  
-  const handleUpdateSupplier = (updatedSupplier: Supplier) => {
-    setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+
+  const handleUpdateSupplier = async (updatedSupplier: Supplier) => {
+    const { id, ...data } = updatedSupplier;
+    await updateDoc(doc(db, 'suppliers', id), data);
     addLogEntry(`Updated supplier: ${updatedSupplier.name}`);
   };
 
-  const handleDeleteSupplier = (supplierId: string) => {
+  const handleDeleteSupplier = async (supplierId: string) => {
     const supplierName = suppliers.find(s => s.id === supplierId)?.name || 'Unknown';
-    setSuppliers(prev => prev.filter(s => s.id !== supplierId));
+    await deleteDoc(doc(db, 'suppliers', supplierId));
     addLogEntry(`Deleted supplier: ${supplierName}`);
   };
 
   // Product CRUD
-  const handleAddProduct = (product: Omit<Product, 'id'>): Product => {
-    const newProduct: Product = { ...product, id: `PROD-${Date.now()}` };
-    setProducts(prev => [newProduct, ...prev]);
+  const handleAddProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
+    const docRef = await addDoc(collection(db, 'products'), product);
     addLogEntry(`Added product: ${product.name}`);
-    return newProduct;
+    return { ...product, id: docRef.id };
   };
-  
-  const handleUpdateProduct = (updatedProduct: Product) => {
-    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+
+  const handleUpdateProduct = async (updatedProduct: Product) => {
+    const { id, ...data } = updatedProduct;
+    await updateDoc(doc(db, 'products', id), data);
     addLogEntry(`Updated product: ${updatedProduct.name}`);
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (productId: string) => {
     const productName = products.find(p => p.id === productId)?.name || 'Unknown';
-    setProducts(prev => prev.filter(p => p.id !== productId));
+    await deleteDoc(doc(db, 'products', productId));
     addLogEntry(`Deleted product: ${productName}`);
   };
 
   // Sale Handlers
-  const handleAddSale = (sale: Omit<Sale, 'id'>) => {
-    const newSale = { ...sale, id: `SALE-${Date.now()}` };
-    setSales(prev => [newSale, ...prev]);
-    addLogEntry(`Created sale ${newSale.id} (Total: ₹${newSale.amount.toFixed(2)})`);
+  const handleAddSale = async (sale: Omit<Sale, 'id'>) => {
+    const docRef = await addDoc(collection(db, 'sales'), sale);
+    addLogEntry(`Created sale ${docRef.id} (Total: ₹${sale.amount.toFixed(2)})`);
   };
 
-  const handleUpdateSale = (updatedSale: Sale) => {
-    setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+  const handleUpdateSale = async (updatedSale: Sale) => {
+    const { id, ...data } = updatedSale;
+    await updateDoc(doc(db, 'sales', id), data);
     addLogEntry(`Updated sale ${updatedSale.id}`);
   };
 
-  const handleDeleteSale = (saleId: string) => {
-    setSales(prev => prev.filter(s => s.id !== saleId));
+  const handleDeleteSale = async (saleId: string) => {
+    await deleteDoc(doc(db, 'sales', saleId));
     addLogEntry(`Deleted sale ${saleId}`);
   };
 
   // Purchase Handlers
-  const handleAddPurchase = (purchaseData: any) => {
+  const handleAddPurchase = async (purchaseData: any) => {
     const { initialPaidAmount, ...purchase } = purchaseData;
-    
-    // Status Logic for Purchase Entry
+
     const total = purchase.total;
     const paidAmount = initialPaidAmount !== undefined ? (parseFloat(initialPaidAmount) || 0) : (purchase.paymentMethod === 'Credit' ? 0 : total);
-    
+
     let status: 'Paid' | 'Partially Paid' | 'Unpaid' = 'Unpaid';
     if (paidAmount >= total) status = 'Paid';
     else if (paidAmount > 0) status = 'Partially Paid';
-    else status = 'Unpaid';
 
     const sourceMap: Record<string, 'Stock' | 'Bank' | 'Savings'> = {
       'Cash': 'Stock',
@@ -171,142 +175,141 @@ const App = () => {
       'Savings': 'Savings'
     };
 
-    const newPurchase: Purchase = {
+    const paymentHistory: PaymentRecord[] = paidAmount > 0 ? [{
+      id: `PAY-INIT-${Date.now()}`,
+      date: purchase.date,
+      amount: paidAmount,
+      source: sourceMap[purchase.paymentMethod] || 'Stock'
+    }] : [];
+
+    const newPurchaseData = {
       ...purchase,
-      id: `PUR-${Date.now()}`,
       paymentStatus: status,
       paidAmount: paidAmount,
-      paymentHistory: paidAmount > 0 ? [{
-        id: `PAY-INIT-${Date.now()}`,
-        date: purchase.date,
-        amount: paidAmount,
-        source: sourceMap[purchase.paymentMethod] || 'Stock'
-      }] : [],
+      paymentHistory: paymentHistory,
     };
-    
-    setPurchases(prev => [newPurchase, ...prev]);
-    
-    // Update stock if items exist
-    if (newPurchase.items && newPurchase.items.length > 0) {
-        setProducts(prevProducts => {
-          const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
-          newPurchase.items.forEach(item => {
-              const product = productMap.get(item.productId);
-              if (product) {
-                  product.stock += item.quantity;
-                  product.mrp = item.mrp;
-              }
+
+    const batch = writeBatch(db);
+    const purchaseRef = doc(collection(db, 'purchases'));
+    batch.set(purchaseRef, newPurchaseData);
+
+    // Update stock for each item
+    if (newPurchaseData.items && newPurchaseData.items.length > 0) {
+      for (const item of newPurchaseData.items) {
+        if (item.productId) {
+          const productRef = doc(db, 'products', item.productId);
+          batch.update(productRef, {
+            stock: increment(item.quantity),
+            mrp: item.mrp
           });
-          return Array.from(productMap.values());
-        });
+        }
+      }
     }
 
-    addLogEntry(`Created purchase ${newPurchase.id} from ${newPurchase.supplierName} (Total: ₹${newPurchase.total.toFixed(2)}, Paid: ₹${paidAmount.toFixed(2)})`);
+    await batch.commit();
+    addLogEntry(`Created purchase from ${newPurchaseData.supplierName} (Total: ₹${total.toFixed(2)}, Paid: ₹${paidAmount.toFixed(2)})`);
   };
 
-  const handleDeletePurchase = (purchaseId: string) => {
+  const handleDeletePurchase = async (purchaseId: string) => {
     const purchaseToDelete = purchases.find(p => p.id === purchaseId);
     if (!purchaseToDelete) return;
 
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'purchases', purchaseId));
+
     if (purchaseToDelete.items && purchaseToDelete.items.length > 0) {
-        setProducts(prevProducts => {
-            const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
-            purchaseToDelete.items.forEach(item => {
-                const product = productMap.get(item.productId);
-                if (product) {
-                    product.stock -= item.quantity;
-                }
-            });
-            return Array.from(productMap.values());
-        });
+      for (const item of purchaseToDelete.items) {
+        if (item.productId) {
+          const productRef = doc(db, 'products', item.productId);
+          batch.update(productRef, { stock: increment(-item.quantity) });
+        }
+      }
     }
-    
-    setPurchases(prev => prev.filter(p => p.id !== purchaseId));
+
+    await batch.commit();
     addLogEntry(`Deleted purchase ${purchaseId}`);
   };
 
-  const handleUpdatePurchasePayment = (purchaseId: string, paymentRecord: Omit<PaymentRecord, 'id'>) => {
-    setPurchases(prev => prev.map(p => {
-      if (p.id === purchaseId) {
-        const newPaidAmount = p.paidAmount + paymentRecord.amount;
-        // Correct status logic for installments
-        let newStatus: 'Paid' | 'Partially Paid' | 'Unpaid' = 'Unpaid';
-        if (newPaidAmount >= p.total) newStatus = 'Paid';
-        else if (newPaidAmount > 0) newStatus = 'Partially Paid';
-        else newStatus = 'Unpaid';
-        
-        const newHistory = [...p.paymentHistory, { ...paymentRecord, id: `PAY-${Date.now()}` }];
-        
-        addLogEntry(`Recorded payment of ₹${paymentRecord.amount.toFixed(2)} from ${paymentRecord.source} for purchase ${p.id}.`);
+  const handleUpdatePurchasePayment = async (purchaseId: string, paymentRecord: Omit<PaymentRecord, 'id'>) => {
+    const purchase = purchases.find(p => p.id === purchaseId);
+    if (!purchase) return;
 
-        return {
-          ...p,
-          paidAmount: newPaidAmount,
-          paymentStatus: newStatus,
-          paymentHistory: newHistory,
-        };
-      }
-      return p;
-    }));
-  };
+    const newPaidAmount = purchase.paidAmount + paymentRecord.amount;
+    let newStatus: 'Paid' | 'Partially Paid' | 'Unpaid' = 'Unpaid';
+    if (newPaidAmount >= purchase.total) newStatus = 'Paid';
+    else if (newPaidAmount > 0) newStatus = 'Partially Paid';
 
-  const handleAddBill = (bill: Omit<Bill, 'id'>) => {
-    const newBill: Bill = { ...bill, id: `BILL-${Date.now()}` };
-    setBills(prev => [newBill, ...prev]);
-    setProducts(prevProducts => {
-      const productMap = new Map<string, Product>(prevProducts.map(p => [p.id, { ...p }]));
-      newBill.items.forEach(item => {
-          const product = productMap.get(item.productId);
-          if (product) {
-              product.stock -= item.quantity;
-          }
-      });
-      return Array.from(productMap.values());
+    const newPaymentRecord = { ...paymentRecord, id: `PAY-${Date.now()}` };
+
+    await updateDoc(doc(db, 'purchases', purchaseId), {
+      paidAmount: newPaidAmount,
+      paymentStatus: newStatus,
+      paymentHistory: [...purchase.paymentHistory, newPaymentRecord],
     });
-    addLogEntry(`Created bill ${newBill.id} for ${newBill.patientName} (Total: ₹${newBill.grandTotal.toFixed(2)})`);
+
+    addLogEntry(`Recorded payment of ₹${paymentRecord.amount.toFixed(2)} from ${paymentRecord.source} for purchase ${purchase.id}.`);
   };
 
-  const handleUpdateBill = (updatedBill: Bill) => {
-    setBills(prev => prev.map(b => b.id === updatedBill.id ? updatedBill : b));
+  const handleAddBill = async (bill: Omit<Bill, 'id'>) => {
+    const batch = writeBatch(db);
+    const billRef = doc(collection(db, 'bills'));
+    batch.set(billRef, bill);
+
+    bill.items.forEach(item => {
+      if (item.productId) {
+        const productRef = doc(db, 'products', item.productId);
+        batch.update(productRef, { stock: increment(-item.quantity) });
+      }
+    });
+
+    await batch.commit();
+    addLogEntry(`Created bill for ${bill.patientName} (Total: ₹${bill.grandTotal.toFixed(2)})`);
+  };
+
+  const handleUpdateBill = async (updatedBill: Bill) => {
+    const { id, ...data } = updatedBill;
+    await updateDoc(doc(db, 'bills', id), data);
     addLogEntry(`Updated bill ${updatedBill.id}`);
   };
 
-  const handleAddMoneyTransaction = (tx: Omit<MoneyTransaction, 'id'>) => {
-    const newTx: MoneyTransaction = { ...tx, id: `TX-${Date.now()}` };
-    setMoneyTransactions(prev => [newTx, ...prev]);
+  const handleAddMoneyTransaction = async (tx: Omit<MoneyTransaction, 'id'>) => {
+    await addDoc(collection(db, 'moneyTransactions'), tx);
     addLogEntry(`${tx.category} of ₹${tx.amount.toFixed(2)} in ${tx.type}`);
   };
 
-  const handleUpdateMoneyTransaction = (updatedTx: MoneyTransaction) => {
-    setMoneyTransactions(prev => prev.map(tx => tx.id === updatedTx.id ? updatedTx : tx));
+  const handleUpdateMoneyTransaction = async (updatedTx: MoneyTransaction) => {
+    const { id, ...data } = updatedTx;
+    await updateDoc(doc(db, 'moneyTransactions', id), data);
     addLogEntry(`Updated ${updatedTx.category} entry ${updatedTx.id}`);
   };
 
-  const handleDeleteMoneyTransaction = (txId: string) => {
-    setMoneyTransactions(prev => prev.filter(tx => tx.id !== txId));
+  const handleDeleteMoneyTransaction = async (txId: string) => {
+    await deleteDoc(doc(db, 'moneyTransactions', txId));
     addLogEntry(`Deleted money transaction ${txId}`);
   };
 
-  const handleTransfer = (from: 'Stock' | 'Bank' | 'Savings', to: 'Stock' | 'Bank' | 'Savings', amount: number) => {
+  const handleTransfer = async (from: 'Stock' | 'Bank' | 'Savings', to: 'Stock' | 'Bank' | 'Savings', amount: number) => {
     const ts = new Date().toISOString();
-    const txIdBase = Date.now();
-    const txFrom: MoneyTransaction = {
-      id: `TX-${txIdBase}-OUT`,
+    const batch = writeBatch(db);
+    const txFromRef = doc(collection(db, 'moneyTransactions'));
+    const txToRef = doc(collection(db, 'moneyTransactions'));
+
+    batch.set(txFromRef, {
       date: ts,
       amount: -amount,
       type: from,
       category: 'Transfer',
       description: `Transfer to ${to}`
-    };
-    const txTo: MoneyTransaction = {
-      id: `TX-${txIdBase}-IN`,
+    });
+    batch.set(txToRef, {
       date: ts,
       amount: amount,
       type: to,
       category: 'Transfer',
       description: `Transfer from ${from}`
-    };
-    setMoneyTransactions(prev => [txFrom, txTo, ...prev]);
+    });
+
+    await batch.commit();
     addLogEntry(`Transferred ₹${amount} from ${from} to ${to}`);
   };
 
@@ -346,8 +349,8 @@ const App = () => {
         return <Accounts setActiveView={setActiveView} />;
       case 'money':
         return (
-          <MoneyManagement 
-            moneyTransactions={moneyTransactions} 
+          <MoneyManagement
+            moneyTransactions={moneyTransactions}
             sales={sales}
             bills={bills}
             purchases={purchases}
@@ -393,13 +396,24 @@ const App = () => {
     return <Login onLogin={handleLogin} error={loginError} />;
   }
 
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-slate-50 min-h-screen font-sans">
        <div className="md:flex">
         <Header activeView={activeView} setActiveView={setActiveView} currentUser={currentUser} onLogout={handleLogout} />
         <main className="flex-1 p-4 md:p-6 lg:p-8 relative">
           {renderContent()}
-          
+
            <button
             onClick={() => setIsChatOpen(!isChatOpen)}
             className="fixed bottom-6 right-6 p-4 bg-blue-600 text-white rounded-full shadow-2xl hover:bg-blue-700 transition-all duration-300 z-40 flex items-center justify-center group"
@@ -410,9 +424,9 @@ const App = () => {
               Ask AI
             </span>
           </button>
-          
-          <Chatbot 
-            isOpen={isChatOpen} 
+
+          <Chatbot
+            isOpen={isChatOpen}
             onClose={() => setIsChatOpen(false)}
             sales={sales}
             purchases={purchases}

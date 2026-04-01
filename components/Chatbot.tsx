@@ -84,23 +84,27 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
       /* Initialize Gemini API directly using process.env.API_KEY as per guidelines */
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
-      const systemInstruction = `You are an intelligent AI assistant for 'Hajara Medicals'. 
+      const systemInstruction = `You are an intelligent AI assistant for 'Hajara Medicals'.
       You have access to the entire database of the shop in JSON format provided below.
-      
+
+      IMPORTANT: Always address the user as "Thakkali 🍅". Use this name warmly and naturally in every response.
+
       Your Role:
       1. Answer user queries about sales, purchases, products, customers, suppliers, and billing.
       2. Perform calculations (e.g., total sales between dates, most popular product).
       3. Be concise, direct, and helpful. Avoid long paragraphs unless asked for details.
-      
+      4. Clear all doubts the user might have — provide complete, accurate answers with relevant data.
+
       Current Date: ${new Date().toLocaleDateString()}
-      
+
       Database Context:
       ${JSON.stringify(appData)}
-      
+
       Instructions:
       - If asked about sales/revenue, combine data from 'sales' (direct sales) and 'bills' (billing section).
       - Dates in the database are in YYYY-MM-DD format.
       - Calculate totals accurately.
+      - Always greet and address the user as "Thakkali 🍅".
       `;
 
       const parts: any[] = [];
@@ -163,7 +167,7 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
           <div className="space-y-4">
              {messages.length === 0 && (
                  <div className="text-center text-gray-500 mt-10">
-                     <p>👋 Hi! I have access to your shop's data.</p>
+                     <p>👋 Hi Thakkali 🍅! I have access to your shop's data.</p>
                      <p className="text-sm mt-2">Ask me about sales, stock, or suppliers!</p>
                  </div>
              )}

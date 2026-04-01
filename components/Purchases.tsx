@@ -93,7 +93,7 @@ const PurchaseForm = ({
   bankBalance: number;
   onSave: (purchase: Omit<Purchase, 'id' | 'paymentStatus' | 'paidAmount' | 'paymentHistory'>) => void;
   onCancel: () => void;
-  onAddProduct: (product: Omit<Product, 'id'>) => Product;
+  onAddProduct: (product: Omit<Product, 'id'>) => Product | Promise<Product>;
 }) => {
   const [supplierId, setSupplierId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -311,7 +311,7 @@ const PurchaseForm = ({
   };
   
     const fileToGenerativePart = async (file: File) => {
-        const base64EncodedDataPromise = new Promise((resolve) => {
+        const base64EncodedDataPromise = new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
             reader.readAsDataURL(file);
@@ -400,7 +400,7 @@ const PurchaseForm = ({
         }
     };
     
-    const handleConfirmAutofill = () => {
+    const handleConfirmAutofill = async () => {
         if (!autofilledData) return;
     
         if (autofilledData.matchedSupplier) {
@@ -413,8 +413,8 @@ const PurchaseForm = ({
             setInvoiceNo(autofilledData.invoiceNo);
         }
         
-        const newItemsFromAutofill = autofilledData.items
-            .map((item: any) => {
+        const newItemsFromAutofill = await Promise.all(autofilledData.items
+            .map(async (item: any) => {
                 let productInfo;
                 if (item.matchedProduct) {
                   productInfo = item.matchedProduct;
@@ -427,9 +427,9 @@ const PurchaseForm = ({
                     stock: 0, // Stock will be added by the purchase logic
                     mrp: item.mrp || 0,
                   };
-                  productInfo = onAddProduct(newProductData);
+                  productInfo = await onAddProduct(newProductData);
                 }
-    
+
                 return {
                     productId: productInfo.id,
                     quantity: item.quantity || 1,
@@ -444,8 +444,8 @@ const PurchaseForm = ({
                     batchNo: item.batchNo || '',
                     expiryDate: item.expiryDate || '',
                 };
-            });
-    
+            }));
+
         setItems(prev => [...prev, ...newItemsFromAutofill]);
         setAutofilledData(null);
         setFormError('');
@@ -644,7 +644,7 @@ interface PurchasesProps {
   suppliers: Supplier[];
   onAddSupplier: (supplier: Omit<Supplier, 'id'>) => void;
   onDeletePurchase: (purchaseId: string) => void;
-  onAddProduct: (product: Omit<Product, 'id'>) => Product;
+  onAddProduct: (product: Omit<Product, 'id'>) => Product | Promise<Product>;
   stockBalance: number;
   savingsBalance: number;
   bankBalance: number;

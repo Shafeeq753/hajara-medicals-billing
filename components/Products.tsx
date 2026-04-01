@@ -7,7 +7,7 @@ import ProductForm from './ProductForm';
 interface ProductsProps {
   products: Product[];
   purchases: Purchase[];
-  onAddProduct: (product: Omit<Product, 'id'>) => void | Product;
+  onAddProduct: (product: Omit<Product, 'id'>) => void | Product | Promise<Product>;
   onUpdateProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
 }
