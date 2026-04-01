@@ -148,21 +148,34 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
       }
       parts.push({ text: input || '(Analyze the image)' });
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: { parts },
-        config: {
-            systemInstruction: systemInstruction
-        }
-      });
+      const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
+      let response = null;
 
-      setMessages(prev => [...prev, { role: 'model', text: response.text || "I couldn't generate a response." }]);
+      for (const model of models) {
+        try {
+          response = await ai.models.generateContent({
+            model,
+            contents: { parts },
+            config: { systemInstruction }
+          });
+          break;
+        } catch (e: any) {
+          const eMsg = e?.message || '';
+          if (eMsg.includes('429') || eMsg.includes('RESOURCE_EXHAUSTED') || eMsg.includes('quota') || eMsg.includes('404') || eMsg.includes('not found')) {
+            console.warn(`Model ${model} failed, trying next...`);
+            continue;
+          }
+          throw e;
+        }
+      }
+
+      setMessages(prev => [...prev, { role: 'model', text: response?.text || "I couldn't generate a response." }]);
     } catch (error: any) {
       console.error("Gemini API Error:", error);
       let errorMessage = "Sorry, I'm having trouble connecting right now.";
       const msg = error?.message || '';
       if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota')) {
-        errorMessage = "Hey Thakkali 🍅, the AI quota has been reached for today. Please try again tomorrow or check your Google AI API plan.";
+        errorMessage = "Hey Thakkali 🍅, all AI model quotas have been reached. Please try again later or check your Google AI API plan at ai.google.dev.";
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -193,7 +206,7 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
         <header className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <div className="flex items-center space-x-2">
              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-             <h3 className="text-lg font-semibold">AI Assistant</h3>
+             <h3 className="text-lg font-semibold">Thakkali Agent 🍅</h3>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-white/20 transition-colors"><CloseIcon /></button>
         </header>
