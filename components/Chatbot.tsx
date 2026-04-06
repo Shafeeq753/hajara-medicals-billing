@@ -121,8 +121,6 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
       const systemInstruction = `You are an intelligent AI assistant for 'Hajara Medicals'.
       You have access to the shop's database summary below.
 
-      IMPORTANT: Always address the user as "Thakkali 🍅". Use this name warmly and naturally in every response.
-
       Your Role:
       1. Answer user queries about sales, purchases, products, customers, suppliers, and billing.
       2. Perform calculations (e.g., total sales between dates, most popular product).
@@ -137,7 +135,7 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
       - If asked about sales/revenue, combine data from 'sales' (direct sales) and 'bills' (billing section).
       - Dates in the database are in YYYY-MM-DD format.
       - Calculate totals accurately.
-      - Always greet and address the user as "Thakkali 🍅".
+      - Be friendly and professional.
       `;
 
       const parts: any[] = [];
@@ -175,7 +173,7 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
       let errorMessage = "Sorry, I'm having trouble connecting right now.";
       const msg = error?.message || '';
       if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota')) {
-        errorMessage = "Hey Thakkali 🍅, all AI model quotas have been reached. Please try again later or check your Google AI API plan at ai.google.dev.";
+        errorMessage = "All AI model quotas have been reached. Please try again later or check your Google AI API plan at ai.google.dev.";
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -206,7 +204,7 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
         <header className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <div className="flex items-center space-x-2">
              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-             <h3 className="text-lg font-semibold">Thakkali Agent 🍅</h3>
+             <h3 className="text-lg font-semibold">AI Assistant</h3>
           </div>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-white/20 transition-colors"><CloseIcon /></button>
         </header>
@@ -215,7 +213,7 @@ const Chatbot = ({ isOpen, onClose, ...appData }: ChatbotProps) => {
           <div className="space-y-4">
              {messages.length === 0 && (
                  <div className="text-center text-gray-500 mt-10">
-                     <p>👋 Hi Thakkali 🍅! I have access to your shop's data.</p>
+                     <p>👋 Hi! I have access to your shop's data.</p>
                      <p className="text-sm mt-2">Ask me about sales, stock, or suppliers!</p>
                  </div>
              )}
