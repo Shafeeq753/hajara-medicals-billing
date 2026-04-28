@@ -49,6 +49,7 @@ declare global {
       checkForUpdates: () => Promise<UpdaterStatus>;
       installUpdateNow: () => Promise<true>;
       getAppVersion: () => Promise<string>;
+      openUpdateLog: () => Promise<string>;
       onUpdaterStatus: (cb: (status: UpdaterStatus) => void) => () => void;
     };
   }

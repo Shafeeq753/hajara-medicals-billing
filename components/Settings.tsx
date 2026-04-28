@@ -216,6 +216,12 @@ const Settings: React.FC<Props> = ({ data, onStoragePathChanged }) => {
           >
             Check for Updates
           </button>
+          <button
+            onClick={() => electron().openUpdateLog()}
+            className="bg-slate-100 hover:bg-slate-200 text-gray-800 font-medium py-2 px-4 rounded-lg border border-gray-300"
+          >
+            Open Update Log
+          </button>
           {updateInfo && <span className="text-sm text-gray-700">{updateInfo}</span>}
         </div>
       </section>

@@ -7,26 +7,50 @@ const UpdateBanner: React.FC = () => {
 
   useEffect(() => {
     if (!isElectron()) return;
-    return electron().onUpdaterStatus(s => setStatus(s));
+    return electron().onUpdaterStatus(s => {
+      setStatus(s);
+      setDismissed(false);
+    });
   }, []);
 
   if (!status) return null;
   if (dismissed && status.state !== 'ready') return null;
 
+  if (status.state === 'checking') {
+    return <Pill color="gray">Checking for updates…</Pill>;
+  }
+
   if (status.state === 'available') {
-    return (
-      <Pill color="blue">
-        <span>Update available{status.version ? ` (v${status.version})` : ''} — downloading…</span>
-      </Pill>
-    );
+    return <Pill color="blue">Update available{status.version ? ` (v${status.version})` : ''} — downloading…</Pill>;
   }
 
   if (status.state === 'downloading') {
     const pct = Math.round(status.percent ?? 0);
+    return <Pill color="blue">Downloading update… {pct}%</Pill>;
+  }
+
+  if (status.state === 'error') {
     return (
-      <Pill color="blue">
-        <span>Downloading update… {pct}%</span>
-      </Pill>
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-red-50 border border-red-300 shadow-2xl rounded-xl p-4 max-w-md">
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <p className="font-semibold text-red-800">Update error</p>
+            <p className="text-sm text-red-700 break-words">{status.message || 'Unknown error'}</p>
+            <button
+              onClick={() => electron().openUpdateLog()}
+              className="text-xs text-red-700 underline mt-2"
+            >
+              Open update log
+            </button>
+          </div>
+          <button
+            onClick={() => setDismissed(true)}
+            className="text-red-500 hover:text-red-700 text-sm shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -59,10 +83,11 @@ const UpdateBanner: React.FC = () => {
   return null;
 };
 
-const Pill: React.FC<{ color: 'blue' | 'red'; children: React.ReactNode }> = ({ color, children }) => {
-  const cls = color === 'blue'
-    ? 'bg-blue-50 border-blue-200 text-blue-800'
-    : 'bg-red-50 border-red-200 text-red-800';
+const Pill: React.FC<{ color: 'blue' | 'red' | 'gray'; children: React.ReactNode }> = ({ color, children }) => {
+  const cls =
+    color === 'blue' ? 'bg-blue-50 border-blue-200 text-blue-800'
+    : color === 'red' ? 'bg-red-50 border-red-200 text-red-800'
+    : 'bg-gray-50 border-gray-200 text-gray-700';
   return (
     <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 ${cls} border rounded-full shadow-lg px-4 py-2 text-sm font-medium`}>
       {children}

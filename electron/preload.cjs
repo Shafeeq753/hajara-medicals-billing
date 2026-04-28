@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   installUpdateNow: () => ipcRenderer.invoke('updater:installNow'),
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  openUpdateLog: () => ipcRenderer.invoke('updater:openLog'),
   onUpdaterStatus: (cb) => {
     const listener = (_e, payload) => cb(payload);
     ipcRenderer.on('updater:status', listener);

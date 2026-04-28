@@ -2,7 +2,7 @@
   "name": "hajara-medicals",
   "productName": "Hajara Medicals",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Hajara Medicals — Billing & Inventory desktop app",
   "main": "electron/main.cjs",
   "type": "module",
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.20.0",
+    "electron-log": "^5.4.3",
     "electron-updater": "^6.8.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

@@ -2,9 +2,14 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
+const log = require('electron-log');
 const { autoUpdater } = require('electron-updater');
 
 const isDev = !app.isPackaged;
+
+log.transports.file.level = 'debug';
+log.transports.console.level = 'debug';
+const updaterLogPath = log.transports.file.getFile().path;
 
 const CONFIG_FILE = path.join(app.getPath('userData'), 'config.json');
 const DATA_FILENAME = 'hajara-data.json';
@@ -40,6 +45,7 @@ function send(channel, payload) {
 function setupAutoUpdater() {
   if (isDev) return;
 
+  autoUpdater.logger = log;
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.setFeedURL({
@@ -48,16 +54,34 @@ function setupAutoUpdater() {
     repo: 'hajara-medicals-billing',
   });
 
-  autoUpdater.on('checking-for-update', () => send('updater:status', { state: 'checking' }));
-  autoUpdater.on('update-available', info => send('updater:status', { state: 'available', version: info?.version }));
-  autoUpdater.on('update-not-available', () => send('updater:status', { state: 'none' }));
-  autoUpdater.on('download-progress', p => send('updater:status', { state: 'downloading', percent: p?.percent }));
-  autoUpdater.on('update-downloaded', info => send('updater:status', { state: 'ready', version: info?.version }));
-  autoUpdater.on('error', err => send('updater:status', { state: 'error', message: err?.message || String(err) }));
+  autoUpdater.on('checking-for-update', () => {
+    log.info('[updater] checking-for-update');
+    send('updater:status', { state: 'checking' });
+  });
+  autoUpdater.on('update-available', info => {
+    log.info('[updater] update-available', info);
+    send('updater:status', { state: 'available', version: info?.version });
+  });
+  autoUpdater.on('update-not-available', info => {
+    log.info('[updater] update-not-available', info);
+    send('updater:status', { state: 'none' });
+  });
+  autoUpdater.on('download-progress', p => {
+    log.info('[updater] download-progress', p?.percent);
+    send('updater:status', { state: 'downloading', percent: p?.percent });
+  });
+  autoUpdater.on('update-downloaded', info => {
+    log.info('[updater] update-downloaded', info);
+    send('updater:status', { state: 'ready', version: info?.version });
+  });
+  autoUpdater.on('error', err => {
+    log.error('[updater] error', err);
+    send('updater:status', { state: 'error', message: err?.message || String(err) });
+  });
 
   setTimeout(() => {
     autoUpdater.checkForUpdates().catch(err => {
-      console.warn('Auto-update check failed:', err?.message || err);
+      log.error('[updater] checkForUpdates threw', err);
     });
   }, 4000);
 }
@@ -194,3 +218,8 @@ ipcMain.handle('updater:installNow', async () => {
 });
 
 ipcMain.handle('app:getVersion', () => app.getVersion());
+
+ipcMain.handle('updater:openLog', async () => {
+  await shell.showItemInFolder(updaterLogPath);
+  return updaterLogPath;
+});
