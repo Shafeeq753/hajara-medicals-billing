@@ -10,14 +10,16 @@
     "dev:web": "vite",
     "dev": "concurrently -k -n VITE,ELECTRON -c blue,magenta \"vite\" \"wait-on http://localhost:3000 && electron .\"",
     "build:web": "vite build",
-    "package": "electron-packager . \"Hajara Medicals\" --platform=win32 --arch=x64 --out=release --overwrite --asar --ignore=^/release($|/) --ignore=^/\\.git($|/) --ignore=^/data/mockData\\.ts$ --app-version=1.0.0",
-    "installer": "node scripts/make-installer.js",
+    "package": "node scripts/make-package.cjs",
+    "installer": "node scripts/make-installer.cjs",
     "build": "npm run build:web && npm run package && npm run installer",
+    "release": "npm run build && node scripts/make-release.cjs",
     "preview": "vite preview",
     "start": "electron ."
   },
   "dependencies": {
     "@google/genai": "^1.20.0",
+    "electron-updater": "^6.8.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"

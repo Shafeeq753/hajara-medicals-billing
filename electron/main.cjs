@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
+const { autoUpdater } = require('electron-updater');
 
 const isDev = !app.isPackaged;
 
@@ -30,6 +31,37 @@ function dataFilePath() {
   return path.join(cfg.storageDir, DATA_FILENAME);
 }
 
+function send(channel, payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
+}
+
+function setupAutoUpdater() {
+  if (isDev) return;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'Shafeeq753',
+    repo: 'hajara-medicals-billing',
+  });
+
+  autoUpdater.on('checking-for-update', () => send('updater:status', { state: 'checking' }));
+  autoUpdater.on('update-available', info => send('updater:status', { state: 'available', version: info?.version }));
+  autoUpdater.on('update-not-available', () => send('updater:status', { state: 'none' }));
+  autoUpdater.on('download-progress', p => send('updater:status', { state: 'downloading', percent: p?.percent }));
+  autoUpdater.on('update-downloaded', info => send('updater:status', { state: 'ready', version: info?.version }));
+  autoUpdater.on('error', err => send('updater:status', { state: 'error', message: err?.message || String(err) }));
+
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      console.warn('Auto-update check failed:', err?.message || err);
+    });
+  }, 4000);
+}
+
 async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -56,6 +88,8 @@ async function createWindow() {
     shell.openExternal(url);
     return { action: 'deny' };
   });
+
+  setupAutoUpdater();
 }
 
 app.whenReady().then(createWindow);
@@ -143,3 +177,20 @@ ipcMain.handle('storage:openFolder', async () => {
   if (cfg.storageDir) await shell.openPath(cfg.storageDir);
   return true;
 });
+
+ipcMain.handle('updater:check', async () => {
+  if (isDev) return { state: 'dev' };
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { state: 'checked', version: result?.updateInfo?.version || null };
+  } catch (err) {
+    return { state: 'error', message: err?.message || String(err) };
+  }
+});
+
+ipcMain.handle('updater:installNow', async () => {
+  setImmediate(() => autoUpdater.quitAndInstall(false, true));
+  return true;
+});
+
+ipcMain.handle('app:getVersion', () => app.getVersion());

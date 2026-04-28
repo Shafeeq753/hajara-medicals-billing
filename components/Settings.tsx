@@ -8,12 +8,28 @@ interface Props {
 
 const Settings: React.FC<Props> = ({ data, onStoragePathChanged }) => {
   const [storagePath, setStoragePath] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('');
+  const [updateInfo, setUpdateInfo] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
     electron().getStoragePath().then(setStoragePath);
+    electron().getAppVersion().then(setAppVersion).catch(() => {});
   }, []);
+
+  const handleCheckUpdate = async () => {
+    setUpdateInfo('Checking…');
+    try {
+      const r = await electron().checkForUpdates();
+      if (r.state === 'dev') setUpdateInfo('Dev mode — updates disabled.');
+      else if (r.state === 'error') setUpdateInfo(`Error: ${r.message}`);
+      else if (r.state === 'checked') setUpdateInfo(r.version ? `Latest version: ${r.version}` : 'You are up to date.');
+      else setUpdateInfo('');
+    } catch (err) {
+      setUpdateInfo(`Error: ${String(err)}`);
+    }
+  };
 
   const flash = (kind: 'ok' | 'err', text: string) => {
     setMessage({ kind, text });
@@ -183,6 +199,25 @@ const Settings: React.FC<Props> = ({ data, onStoragePathChanged }) => {
         >
           {busy ? 'Working…' : 'Export All Data to Excel'}
         </button>
+      </section>
+
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h3 className="text-lg font-semibold mb-3">App Version &amp; Updates</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          Current version: <strong>{appVersion || '…'}</strong>. Updates are checked automatically when
+          the app starts (an internet connection is required). When a new version is downloaded, you'll
+          see a "Restart to update" prompt.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleCheckUpdate}
+            disabled={busy}
+            className="bg-slate-100 hover:bg-slate-200 text-gray-800 font-medium py-2 px-4 rounded-lg border border-gray-300 disabled:opacity-50"
+          >
+            Check for Updates
+          </button>
+          {updateInfo && <span className="text-sm text-gray-700">{updateInfo}</span>}
+        </div>
       </section>
 
       <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

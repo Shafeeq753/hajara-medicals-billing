@@ -79,6 +79,32 @@ After logging in you can add more users from the
 
 
 ------------------------------------------------------------
+ UPDATES (automatic — no action needed)
+------------------------------------------------------------
+
+When a new version of the app is released, your copy will
+update itself:
+
+  1.  Launch the app like normal (internet required for
+      this step).
+  2.  In the background, the app downloads the new
+      version. You can keep using the app while this
+      happens.
+  3.  When ready, a small popup appears at the bottom:
+        "Update ready. Restart now?"
+  4.  Click "Restart". The app closes, installs the new
+      version, and reopens automatically.
+  5.  All your data stays exactly as it was.
+
+You can also manually check from Settings -> Check for
+Updates.
+
+If the PC has no internet, the app still works perfectly
+in offline mode — just no updates until next time you're
+online.
+
+
+------------------------------------------------------------
  SETTINGS (changing things later)
 ------------------------------------------------------------
 

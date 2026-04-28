@@ -20,6 +20,7 @@ import MoneyManagement from './components/MoneyManagement';
 import Chatbot from './components/Chatbot';
 import SetupWizard from './components/SetupWizard';
 import Settings from './components/Settings';
+import UpdateBanner from './components/UpdateBanner';
 import { SparklesIcon } from './components/icons/Icons';
 
 type Phase = 'checkingPath' | 'needsSetup' | 'loading' | 'ready' | 'error';
@@ -512,6 +513,8 @@ const App = () => {
             suppliers={suppliers}
             bills={bills}
           />
+
+          <UpdateBanner />
         </main>
       </div>
     </div>
