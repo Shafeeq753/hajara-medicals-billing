@@ -3,7 +3,9 @@
 
 !define APP_NAME       "Hajara Medicals"
 !define APP_EXE        "Hajara Medicals.exe"
-!define APP_VERSION    "1.0.0"
+!ifndef APP_VERSION
+  !define APP_VERSION  "1.0.0"
+!endif
 !define APP_PUBLISHER  "Hajara Medicals"
 !define APP_ID         "HajaraMedicals"
 !define SOURCE_DIR     "release\Hajara Medicals-win32-x64"

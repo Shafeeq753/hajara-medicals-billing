@@ -2,7 +2,7 @@
   "name": "hajara-medicals",
   "productName": "Hajara Medicals",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hajara Medicals — Billing & Inventory desktop app",
   "main": "electron/main.cjs",
   "type": "module",

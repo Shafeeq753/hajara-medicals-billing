@@ -6,6 +6,7 @@ const path = require('node:path');
 const { packager } = require('@electron/packager');
 
 const ROOT = path.join(__dirname, '..');
+const pkg = require(path.join(ROOT, 'package.json'));
 
 (async () => {
   const opts = {
@@ -16,7 +17,7 @@ const ROOT = path.join(__dirname, '..');
     out: path.join(ROOT, 'release'),
     overwrite: true,
     asar: true,
-    appVersion: '1.0.0',
+    appVersion: pkg.version,
     ignore: [
       /^[\\/]release(?:[\\/]|$)/,
       /^[\\/]\.git(?:[\\/]|$)/,

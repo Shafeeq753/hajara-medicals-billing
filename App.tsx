@@ -35,6 +35,14 @@ const App = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>('');
+
+  useEffect(() => {
+    if (isElectron()) {
+      electron().getAppVersion().then(setAppVersion).catch(() => {});
+    }
+  }, []);
 
   const [data, setData] = useState<AppData>(emptyData);
 
@@ -120,6 +128,7 @@ const App = () => {
       const { password: _pw, ...rest } = user;
       setCurrentUser(rest);
       setLoginError(null);
+      setShowWelcome(true);
       const entry: LogEntry = {
         id: newId('LOG'),
         timestamp: new Date().toISOString(),
@@ -517,6 +526,27 @@ const App = () => {
           <UpdateBanner />
         </main>
       </div>
+
+      {showWelcome && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-green-100 rounded-full mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Hello, {currentUser.name}!</h2>
+            <p className="text-gray-600 mb-1">You are logged in.</p>
+            {appVersion && <p className="text-xs text-gray-400 mb-5">Hajara Medicals v{appVersion}</p>}
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -22,7 +22,13 @@ if (!makensis) {
   process.exit(1);
 }
 
-const script = path.join(__dirname, '..', 'installer.nsi');
-console.log(`[installer] Compiling ${script} with ${makensis}`);
-execFileSync(makensis, ['/V2', script], { stdio: 'inherit', cwd: path.join(__dirname, '..') });
+const ROOT = path.join(__dirname, '..');
+const pkg = require(path.join(ROOT, 'package.json'));
+const script = path.join(ROOT, 'installer.nsi');
+
+console.log(`[installer] Compiling ${script} (v${pkg.version}) with ${makensis}`);
+execFileSync(makensis, ['/V2', `/DAPP_VERSION=${pkg.version}`, script], {
+  stdio: 'inherit',
+  cwd: ROOT,
+});
 console.log('[installer] Done. Output in release/');
