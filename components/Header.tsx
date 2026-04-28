@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { View } from '../types';
-import { DashboardIcon, AccountsIcon, CustomersIcon, MenuIcon, CloseIcon, ProductIcon, SupplierIcon, UserIcon, HistoryIcon, LogoutIcon, ReportIcon, CashIcon } from './icons/Icons';
+import { DashboardIcon, AccountsIcon, CustomersIcon, MenuIcon, CloseIcon, ProductIcon, SupplierIcon, UserIcon, HistoryIcon, LogoutIcon, ReportIcon, CashIcon, SettingsIcon } from './icons/Icons';
 import { User } from '../types';
 
 interface HeaderProps {
@@ -56,6 +56,7 @@ const Header = ({ activeView, setActiveView, currentUser, onLogout }: HeaderProp
         <NavItem view="reports" label="Reports" icon={<ReportIcon />} active={activeView === 'reports'} onClick={handleNavClick} />
         <NavItem view="users" label="Users" icon={<UserIcon />} active={activeView === 'users'} onClick={handleNavClick} />
         <NavItem view="history" label="History Log" icon={<HistoryIcon />} active={activeView === 'history'} onClick={handleNavClick} />
+        <NavItem view="settings" label="Settings" icon={<SettingsIcon />} active={activeView === 'settings'} onClick={handleNavClick} />
       </nav>
       <div className="px-4 py-4 mt-auto border-t">
         <div className="text-sm text-black mb-2">Logged in as: <span className="font-bold">{currentUser.name}</span></div>

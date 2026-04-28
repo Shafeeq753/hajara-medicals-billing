@@ -137,4 +137,4 @@ export interface ChatMessage {
   image?: string;
 }
 
-export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'dailyPurchases' | 'customers' | 'products' | 'suppliers' | 'reports' | 'users' | 'history' | 'pendingPayments' | 'billing' | 'money';
+export type View = 'dashboard' | 'accounts' | 'sales' | 'purchases' | 'dailyPurchases' | 'customers' | 'products' | 'suppliers' | 'reports' | 'users' | 'history' | 'pendingPayments' | 'billing' | 'money' | 'settings';

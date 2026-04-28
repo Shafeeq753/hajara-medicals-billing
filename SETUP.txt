@@ -1,0 +1,145 @@
+==========================================================
+   HAJARA MEDICALS — Billing & Inventory
+   Desktop App Setup Guide (Windows)
+==========================================================
+
+This is a one-time setup. After this you'll have a normal
+Windows app you can launch from the Start menu or desktop.
+
+------------------------------------------------------------
+ STEP 1 — Install the app
+------------------------------------------------------------
+
+1.  Find the file named:
+        Hajara-Medicals-Setup-1.0.0.exe
+
+2.  Double-click it.
+
+3.  If Windows shows a blue "Windows protected your PC"
+    screen (SmartScreen), click:
+        "More info"   -->   "Run anyway"
+    (This appears because the app is not signed with a
+     paid certificate. It is safe — it only writes to the
+     folder you choose.)
+
+4.  Choose where to install (the default is fine), then
+    click Install. The installer will create:
+        - A Start Menu shortcut
+        - A Desktop shortcut named "Hajara Medicals"
+
+5.  When it finishes, launch "Hajara Medicals".
+
+
+------------------------------------------------------------
+ STEP 2 — First-time setup inside the app
+------------------------------------------------------------
+
+The very first time you open the app you'll see a
+"Welcome to Hajara Medicals" screen.
+
+1.  Click "Choose Storage Folder".
+
+2.  A folder picker will open. Pick (or create) a folder
+    where the app should save your data. Suggestions:
+        - Documents\HajaraMedicals\
+        - or a folder inside OneDrive / Google Drive if
+          you want automatic cloud backup
+    Click "Use this folder".
+
+3.  The app will create a single file there called:
+        hajara-data.json
+    This one file holds ALL of your data — customers,
+    sales, bills, purchases, etc. Back this file up
+    occasionally to be safe.
+
+
+------------------------------------------------------------
+ STEP 3 — Log in
+------------------------------------------------------------
+
+The first user is created automatically:
+
+        Username:  thalif
+        Password:  thalif
+
+After logging in you can add more users from the
+"Users" page in the left sidebar.
+
+
+------------------------------------------------------------
+ EVERYDAY USE
+------------------------------------------------------------
+
+- Just launch "Hajara Medicals" from the Start menu or
+  desktop. It opens to the dashboard.
+- Everything you do is saved automatically (a few seconds
+  after each change).
+- The data is stored on YOUR computer only. There is no
+  server, no internet account, no login to any cloud.
+
+
+------------------------------------------------------------
+ SETTINGS (changing things later)
+------------------------------------------------------------
+
+Click "Settings" in the left sidebar to:
+
+  *  See where your data is currently stored
+  *  Change the storage folder (your existing data will
+     be copied to the new location automatically)
+  *  Open the storage folder in File Explorer
+  *  Export ALL data to an Excel (.xlsx) file — useful
+     for sharing reports or making backups
+
+
+------------------------------------------------------------
+ BACKING UP YOUR DATA
+------------------------------------------------------------
+
+Two easy ways:
+
+  Option A (manual):
+    Just copy "hajara-data.json" from your storage folder
+    to a USB stick / external drive / email.
+
+  Option B (automatic):
+    In Settings, change the storage folder to a folder
+    inside OneDrive, Google Drive, or Dropbox. Cloud
+    sync will keep a copy off your PC.
+
+
+------------------------------------------------------------
+ UNINSTALLING
+------------------------------------------------------------
+
+Windows Settings -> Apps -> "Hajara Medicals" -> Uninstall.
+
+Note: uninstalling does NOT delete your data file. Your
+"hajara-data.json" stays in the folder you chose, so you
+can install the app again later and continue from where
+you left off (just point it at the same folder during
+first-time setup).
+
+
+------------------------------------------------------------
+ TROUBLESHOOTING
+------------------------------------------------------------
+
+* "Windows protected your PC" on launch:
+    Click "More info" -> "Run anyway".
+
+* App opens but shows an error reading the data file:
+    Your hajara-data.json may have been edited or
+    corrupted. If you have a backup, replace the file
+    with the backup copy.
+
+* AI Assistant doesn't respond:
+    The chatbot uses Google Gemini. If it stops working,
+    Google may be rate-limiting your key — try again
+    later. The rest of the app still works fine without
+    the chatbot.
+
+
+------------------------------------------------------------
+That's it! Enjoy.
+------------------------------------------------------------
