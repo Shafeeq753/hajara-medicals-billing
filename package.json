@@ -13,6 +13,7 @@
     "package": "node scripts/make-package.cjs",
     "installer": "node scripts/make-installer.cjs",
     "build": "npm run build:web && npm run package && npm run installer",
+    "release:upload": "node scripts/make-release.cjs",
     "release": "npm run build && node scripts/make-release.cjs",
     "preview": "vite preview",
     "start": "electron ."
