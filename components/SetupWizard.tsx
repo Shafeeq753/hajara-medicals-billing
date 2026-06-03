@@ -1,24 +1,23 @@
 import React, { useState } from 'react';
-import { electron } from '../lib/storage';
+import { pickMirrorFolder, isFsAccessSupported } from '../lib/localMirror';
 
 interface Props {
-  onComplete: (chosenPath: string) => void;
+  onComplete: () => void;
 }
 
 const SetupWizard: React.FC<Props> = ({ onComplete }) => {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const supported = isFsAccessSupported();
 
   const pickFolder = async () => {
     setError(null);
     setBusy(true);
     try {
-      const chosen = await electron().pickStoragePath();
-      if (chosen) {
-        onComplete(chosen);
-      }
+      const chosen = await pickMirrorFolder();
+      if (chosen) onComplete();
     } catch (err) {
-      setError(String(err));
+      setError(String(err instanceof Error ? err.message : err));
     } finally {
       setBusy(false);
     }
@@ -38,17 +37,20 @@ const SetupWizard: React.FC<Props> = ({ onComplete }) => {
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
-          <h2 className="font-semibold text-gray-900 mb-2">First-time setup</h2>
-          <p className="text-sm text-gray-700 leading-relaxed">
-            Choose a folder on your computer where the app will save all your data
-            (customers, sales, purchases, bills, etc.).
-          </p>
-          <ul className="text-sm text-gray-700 mt-3 space-y-1 list-disc list-inside">
-            <li>The app stores everything in a single file: <code className="bg-white px-1 rounded">hajara-data.json</code></li>
-            <li>You can change this folder later from the app's Settings.</li>
-            <li>Tip: pick a folder you back up regularly (e.g. <em>Documents</em> or a synced cloud folder).</li>
+          <h2 className="font-semibold text-gray-900 mb-2">How your data is saved</h2>
+          <ul className="text-sm text-gray-700 mt-1 space-y-1 list-disc list-inside">
+            <li>Everything is stored securely in the <strong>cloud (Firebase)</strong> and syncs to every device automatically.</li>
+            <li>Optionally, keep a <strong>local backup file</strong> (<code className="bg-white px-1 rounded">hajara-data.json</code>) in a folder on this computer.</li>
+            <li>You can set or change the backup folder anytime from <strong>Settings</strong>.</li>
           </ul>
         </div>
+
+        {!supported && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 mb-4 text-sm">
+            This browser can't write to a local folder. Your data is still safely saved to the cloud.
+            For a local backup folder, open this app in <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong>.
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-4 text-sm">
@@ -56,16 +58,27 @@ const SetupWizard: React.FC<Props> = ({ onComplete }) => {
           </div>
         )}
 
-        <button
-          onClick={pickFolder}
-          disabled={busy}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {busy ? 'Opening folder picker…' : 'Choose Storage Folder'}
-        </button>
+        <div className="space-y-3">
+          {supported && (
+            <button
+              onClick={pickFolder}
+              disabled={busy}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {busy ? 'Opening folder picker…' : 'Choose Local Backup Folder'}
+            </button>
+          )}
+          <button
+            onClick={onComplete}
+            disabled={busy}
+            className="w-full bg-slate-100 hover:bg-slate-200 text-gray-800 font-semibold py-3 px-6 rounded-lg border border-gray-300 transition disabled:opacity-50"
+          >
+            {supported ? 'Skip for now (cloud only)' : 'Continue'}
+          </button>
+        </div>
 
         <p className="text-xs text-gray-500 text-center mt-6">
-          Default login after setup: <strong>thalif</strong> / <strong>thalif</strong> &nbsp;·&nbsp;
+          Default login: <strong>thalif</strong> / <strong>thalif</strong> &nbsp;·&nbsp;
           you can add more users from the Users page.
         </p>
       </div>

@@ -1,6 +1,10 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { collection, addDoc, updateDoc, deleteDoc, doc, writeBatch, increment } from 'firebase/firestore';
+import { db } from './firebase';
+import { useCollection } from './hooks/useFirestore';
 import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill, CustomerMedicine, MoneyTransaction } from './types';
-import { AppData, electron, emptyData, isElectron } from './lib/storage';
+import { AppData } from './lib/storage';
+import { reconnectMirrorFolder, writeMirror } from './lib/localMirror';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Sales from './components/Sales';
@@ -20,123 +24,90 @@ import MoneyManagement from './components/MoneyManagement';
 import Chatbot from './components/Chatbot';
 import SetupWizard from './components/SetupWizard';
 import Settings from './components/Settings';
-import UpdateBanner from './components/UpdateBanner';
 import { SparklesIcon } from './components/icons/Icons';
 
-type Phase = 'checkingPath' | 'needsSetup' | 'loading' | 'ready' | 'error';
-
-const newId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const SETUP_FLAG = 'hajara_setup_done';
 
 const App = () => {
-  const [phase, setPhase] = useState<Phase>('checkingPath');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // First-run setup (choose local backup folder or skip → cloud only)
+  const [setupDone, setSetupDone] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SETUP_FLAG) === '1';
+    } catch {
+      return true;
+    }
+  });
 
+  // Auth state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<View>('dashboard');
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [appVersion, setAppVersion] = useState<string>('');
 
+  // App state — real-time from Firestore
+  const [activeView, setActiveView] = useState<View>('dashboard');
+  const [customers, customersLoading] = useCollection<Customer>('customers');
+  const [products, productsLoading] = useCollection<Product>('products');
+  const [sales, salesLoading] = useCollection<Sale>('sales');
+  const [purchases, purchasesLoading] = useCollection<Purchase>('purchases');
+  const [suppliers, suppliersLoading] = useCollection<Supplier>('suppliers');
+  const [users, usersLoading] = useCollection<User>('users');
+  const [historyLog] = useCollection<LogEntry>('historyLog');
+  const [bills, billsLoading] = useCollection<Bill>('bills');
+  const [moneyTransactions] = useCollection<MoneyTransaction>('moneyTransactions');
+
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const dataLoading =
+    customersLoading || productsLoading || salesLoading || purchasesLoading ||
+    suppliersLoading || usersLoading || billsLoading;
+
+  // Full snapshot used for the local-folder mirror and exports.
+  const data: AppData = useMemo(() => ({
+    customers, products, sales, purchases, suppliers, users, historyLog, bills, moneyTransactions,
+  }), [customers, products, sales, purchases, suppliers, users, historyLog, bills, moneyTransactions]);
+
+  // Re-attach to a previously chosen backup folder after a reload (no prompt).
   useEffect(() => {
-    if (isElectron()) {
-      electron().getAppVersion().then(setAppVersion).catch(() => {});
-    }
+    reconnectMirrorFolder(false).catch(() => {});
   }, []);
 
-  const [data, setData] = useState<AppData>(emptyData);
-
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dirtyRef = useRef(false);
-  const initializedRef = useRef(false);
-
-  const bootstrap = useCallback(async () => {
-    if (!isElectron()) {
-      setErrorMsg('This build must run inside the Hajara Medicals desktop app.');
-      setPhase('error');
-      return;
-    }
-    try {
-      const path = await electron().getStoragePath();
-      if (!path) {
-        setPhase('needsSetup');
-        return;
-      }
-      setPhase('loading');
-      const loaded = await electron().loadData();
-      if (loaded && (loaded as { __error?: string }).__error) {
-        setErrorMsg(`Could not read your data file: ${(loaded as { __error: string }).__error}`);
-        setPhase('error');
-        return;
-      }
-      const next = (loaded as AppData | null) ?? emptyData();
-      if (!next.users || next.users.length === 0) {
-        next.users = [{ id: newId('USER'), name: 'thalif', password: 'thalif' }];
-      }
-      const ensured: AppData = { ...emptyData(), ...next };
-      setData(ensured);
-      initializedRef.current = true;
-      setPhase('ready');
-    } catch (err) {
-      setErrorMsg(String(err));
-      setPhase('error');
-    }
-  }, []);
-
-  useEffect(() => { bootstrap(); }, [bootstrap]);
-
+  // Mirror every change to the local backup file (debounced). No-ops if no folder.
   useEffect(() => {
-    if (phase !== 'ready' || !initializedRef.current) return;
-    dirtyRef.current = true;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      electron().saveData(data).catch(err => console.error('Save failed:', err));
-      dirtyRef.current = false;
-    }, 400);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [data, phase]);
+    if (dataLoading) return;
+    const t = setTimeout(() => { writeMirror(data).catch(() => {}); }, 600);
+    return () => clearTimeout(t);
+  }, [data, dataLoading]);
 
+  // Seed default user if the Firestore users collection is empty.
   useEffect(() => {
-    const flush = () => {
-      if (dirtyRef.current && initializedRef.current) {
-        electron().saveData(data).catch(() => {});
-      }
-    };
-    window.addEventListener('beforeunload', flush);
-    return () => window.removeEventListener('beforeunload', flush);
-  }, [data]);
+    if (!usersLoading && users.length === 0) {
+      addDoc(collection(db, 'users'), { name: 'thalif', password: 'thalif' });
+    }
+  }, [usersLoading, users.length]);
 
-  const update = <K extends keyof AppData>(key: K, updater: (prev: AppData[K]) => AppData[K]) => {
-    setData(prev => ({ ...prev, [key]: updater(prev[key]) }));
+  const completeSetup = () => {
+    try { localStorage.setItem(SETUP_FLAG, '1'); } catch { /* ignore */ }
+    setSetupDone(true);
   };
 
-  const addLogEntry = (action: string) => {
-    if (!currentUser) return;
-    const entry: LogEntry = {
-      id: newId('LOG'),
+  const addLogEntry = async (action: string, user: User | null = currentUser) => {
+    if (!user) return;
+    await addDoc(collection(db, 'historyLog'), {
       timestamp: new Date().toISOString(),
-      userId: currentUser.id,
-      userName: currentUser.name,
+      userId: user.id,
+      userName: user.name,
       action,
-    };
-    update('historyLog', list => [...list, entry]);
+    });
   };
 
   const handleLogin = (name: string, password: string) => {
-    const user = data.users.find(u => u.name === name && u.password === password);
+    const user = users.find(u => u.name === name && u.password === password);
     if (user) {
-      const { password: _pw, ...rest } = user;
-      setCurrentUser(rest);
+      const { password: _pw, ...userWithoutPassword } = user;
+      setCurrentUser(userWithoutPassword);
       setLoginError(null);
       setShowWelcome(true);
-      const entry: LogEntry = {
-        id: newId('LOG'),
-        timestamp: new Date().toISOString(),
-        userId: rest.id,
-        userName: rest.name,
-        action: 'User logged in.',
-      };
-      update('historyLog', list => [...list, entry]);
+      addLogEntry('User logged in.', userWithoutPassword);
     } else {
       setLoginError('Invalid username or password.');
     }
@@ -151,90 +122,85 @@ const App = () => {
   };
 
   const handleAddUser = async (user: Omit<User, 'id' | 'password'> & { password?: string }) => {
-    const newUser: User = { id: newId('USER'), name: user.name, password: user.password };
-    update('users', list => [...list, newUser]);
+    await addDoc(collection(db, 'users'), { name: user.name, password: user.password });
     addLogEntry(`Added new user: ${user.name}`);
   };
 
   const handleAddCustomer = async (customer: Omit<Customer, 'id'>) => {
-    const newCustomer: Customer = { ...customer, id: newId('CUST') };
-    update('customers', list => [...list, newCustomer]);
+    await addDoc(collection(db, 'customers'), customer);
     addLogEntry(`Added customer: ${customer.name}`);
   };
 
   const handleUpdateCustomerMedicines = async (customerId: string, medicines: CustomerMedicine[]) => {
-    let name = 'Unknown';
-    update('customers', list => list.map(c => {
-      if (c.id === customerId) { name = c.name; return { ...c, medicines }; }
-      return c;
-    }));
-    addLogEntry(`Updated medicines for customer: ${name}`);
+    await updateDoc(doc(db, 'customers', customerId), { medicines });
+    const customerName = customers.find(c => c.id === customerId)?.name || 'Unknown';
+    addLogEntry(`Updated medicines for customer: ${customerName}`);
   };
 
   const handleUpdateCustomer = async (updatedCustomer: Customer) => {
-    update('customers', list => list.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+    const { id, ...data } = updatedCustomer;
+    await updateDoc(doc(db, 'customers', id), data);
     addLogEntry(`Updated details for customer: ${updatedCustomer.name}`);
   };
 
+  // Supplier CRUD
   const handleAddSupplier = async (supplier: Omit<Supplier, 'id'>) => {
-    const newSupplier: Supplier = { ...supplier, id: newId('SUP') };
-    update('suppliers', list => [...list, newSupplier]);
+    await addDoc(collection(db, 'suppliers'), supplier);
     addLogEntry(`Added supplier: ${supplier.name}`);
   };
 
   const handleUpdateSupplier = async (updatedSupplier: Supplier) => {
-    update('suppliers', list => list.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+    const { id, ...data } = updatedSupplier;
+    await updateDoc(doc(db, 'suppliers', id), data);
     addLogEntry(`Updated supplier: ${updatedSupplier.name}`);
   };
 
   const handleDeleteSupplier = async (supplierId: string) => {
-    let name = 'Unknown';
-    update('suppliers', list => list.filter(s => {
-      if (s.id === supplierId) { name = s.name; return false; }
-      return true;
-    }));
-    addLogEntry(`Deleted supplier: ${name}`);
+    const supplierName = suppliers.find(s => s.id === supplierId)?.name || 'Unknown';
+    await deleteDoc(doc(db, 'suppliers', supplierId));
+    addLogEntry(`Deleted supplier: ${supplierName}`);
   };
 
+  // Product CRUD
   const handleAddProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
-    const newProduct: Product = { ...product, id: newId('PROD') };
-    update('products', list => [...list, newProduct]);
+    const docRef = await addDoc(collection(db, 'products'), product);
     addLogEntry(`Added product: ${product.name}`);
-    return newProduct;
+    return { ...product, id: docRef.id };
   };
 
   const handleUpdateProduct = async (updatedProduct: Product) => {
-    update('products', list => list.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    const { id, ...data } = updatedProduct;
+    await updateDoc(doc(db, 'products', id), data);
     addLogEntry(`Updated product: ${updatedProduct.name}`);
   };
 
   const handleDeleteProduct = async (productId: string) => {
-    let name = 'Unknown';
-    update('products', list => list.filter(p => {
-      if (p.id === productId) { name = p.name; return false; }
-      return true;
-    }));
-    addLogEntry(`Deleted product: ${name}`);
+    const productName = products.find(p => p.id === productId)?.name || 'Unknown';
+    await deleteDoc(doc(db, 'products', productId));
+    addLogEntry(`Deleted product: ${productName}`);
   };
 
+  // Sale Handlers
   const handleAddSale = async (sale: Omit<Sale, 'id'>) => {
-    const newSale: Sale = { ...sale, id: newId('SALE') };
-    update('sales', list => [...list, newSale]);
-    addLogEntry(`Created sale ${newSale.id} (Total: ₹${sale.amount.toFixed(2)})`);
+    const docRef = await addDoc(collection(db, 'sales'), sale);
+    addLogEntry(`Created sale ${docRef.id} (Total: ₹${sale.amount.toFixed(2)})`);
   };
 
   const handleUpdateSale = async (updatedSale: Sale) => {
-    update('sales', list => list.map(s => s.id === updatedSale.id ? updatedSale : s));
+    const { id, ...data } = updatedSale;
+    await updateDoc(doc(db, 'sales', id), data);
     addLogEntry(`Updated sale ${updatedSale.id}`);
   };
 
   const handleDeleteSale = async (saleId: string) => {
-    update('sales', list => list.filter(s => s.id !== saleId));
+    await deleteDoc(doc(db, 'sales', saleId));
     addLogEntry(`Deleted sale ${saleId}`);
   };
 
+  // Purchase Handlers
   const handleAddPurchase = async (purchaseData: any) => {
     const { initialPaidAmount, ...purchase } = purchaseData;
+
     const total = purchase.total;
     const paidAmount = initialPaidAmount !== undefined
       ? (parseFloat(initialPaidAmount) || 0)
@@ -251,191 +217,151 @@ const App = () => {
     };
 
     const paymentHistory: PaymentRecord[] = paidAmount > 0 ? [{
-      id: newId('PAY-INIT'),
+      id: `PAY-INIT-${Date.now()}`,
       date: purchase.date,
       amount: paidAmount,
       source: sourceMap[purchase.paymentMethod] || 'Stock',
     }] : [];
 
-    const newPurchase: Purchase = {
+    const newPurchaseData = {
       ...purchase,
-      id: newId('PUR'),
       paymentStatus: status,
       paidAmount,
       paymentHistory,
     };
 
-    setData(prev => {
-      const products = prev.products.map(p => {
-        const item = newPurchase.items.find(it => it.productId === p.id);
-        if (!item) return p;
-        return { ...p, stock: p.stock + item.quantity, mrp: item.mrp };
-      });
-      return {
-        ...prev,
-        purchases: [...prev.purchases, newPurchase],
-        products,
-      };
-    });
+    const batch = writeBatch(db);
+    const purchaseRef = doc(collection(db, 'purchases'));
+    batch.set(purchaseRef, newPurchaseData);
 
-    addLogEntry(`Created purchase from ${newPurchase.supplierName} (Total: ₹${total.toFixed(2)}, Paid: ₹${paidAmount.toFixed(2)})`);
+    if (newPurchaseData.items && newPurchaseData.items.length > 0) {
+      for (const item of newPurchaseData.items) {
+        if (item.productId) {
+          const productRef = doc(db, 'products', item.productId);
+          batch.update(productRef, { stock: increment(item.quantity), mrp: item.mrp });
+        }
+      }
+    }
+
+    await batch.commit();
+    addLogEntry(`Created purchase from ${newPurchaseData.supplierName} (Total: ₹${total.toFixed(2)}, Paid: ₹${paidAmount.toFixed(2)})`);
   };
 
   const handleDeletePurchase = async (purchaseId: string) => {
-    setData(prev => {
-      const target = prev.purchases.find(p => p.id === purchaseId);
-      if (!target) return prev;
-      const products = prev.products.map(p => {
-        const item = target.items.find(it => it.productId === p.id);
-        if (!item) return p;
-        return { ...p, stock: p.stock - item.quantity };
-      });
-      return {
-        ...prev,
-        purchases: prev.purchases.filter(p => p.id !== purchaseId),
-        products,
-      };
-    });
+    const purchaseToDelete = purchases.find(p => p.id === purchaseId);
+    if (!purchaseToDelete) return;
+
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'purchases', purchaseId));
+
+    if (purchaseToDelete.items && purchaseToDelete.items.length > 0) {
+      for (const item of purchaseToDelete.items) {
+        if (item.productId) {
+          const productRef = doc(db, 'products', item.productId);
+          batch.update(productRef, { stock: increment(-item.quantity) });
+        }
+      }
+    }
+
+    await batch.commit();
     addLogEntry(`Deleted purchase ${purchaseId}`);
   };
 
   const handleUpdatePurchasePayment = async (purchaseId: string, paymentRecord: Omit<PaymentRecord, 'id'>) => {
-    let logged = false;
-    update('purchases', list => list.map(p => {
-      if (p.id !== purchaseId) return p;
-      const newPaidAmount = p.paidAmount + paymentRecord.amount;
-      let newStatus: 'Paid' | 'Partially Paid' | 'Unpaid' = 'Unpaid';
-      if (newPaidAmount >= p.total) newStatus = 'Paid';
-      else if (newPaidAmount > 0) newStatus = 'Partially Paid';
-      const record: PaymentRecord = { ...paymentRecord, id: newId('PAY') };
-      logged = true;
-      return {
-        ...p,
-        paidAmount: newPaidAmount,
-        paymentStatus: newStatus,
-        paymentHistory: [...p.paymentHistory, record],
-      };
-    }));
-    if (logged) {
-      addLogEntry(`Recorded payment of ₹${paymentRecord.amount.toFixed(2)} from ${paymentRecord.source} for purchase ${purchaseId}.`);
-    }
+    const purchase = purchases.find(p => p.id === purchaseId);
+    if (!purchase) return;
+
+    const newPaidAmount = purchase.paidAmount + paymentRecord.amount;
+    let newStatus: 'Paid' | 'Partially Paid' | 'Unpaid' = 'Unpaid';
+    if (newPaidAmount >= purchase.total) newStatus = 'Paid';
+    else if (newPaidAmount > 0) newStatus = 'Partially Paid';
+
+    const newPaymentRecord = { ...paymentRecord, id: `PAY-${Date.now()}` };
+
+    await updateDoc(doc(db, 'purchases', purchaseId), {
+      paidAmount: newPaidAmount,
+      paymentStatus: newStatus,
+      paymentHistory: [...purchase.paymentHistory, newPaymentRecord],
+    });
+
+    addLogEntry(`Recorded payment of ₹${paymentRecord.amount.toFixed(2)} from ${paymentRecord.source} for purchase ${purchase.id}.`);
   };
 
   const handleAddBill = async (bill: Omit<Bill, 'id'>) => {
-    const newBill: Bill = { ...bill, id: newId('BILL') };
-    setData(prev => {
-      const products = prev.products.map(p => {
-        const item = newBill.items.find(it => it.productId === p.id);
-        if (!item) return p;
-        return { ...p, stock: p.stock - item.quantity };
-      });
-      return { ...prev, bills: [...prev.bills, newBill], products };
+    const batch = writeBatch(db);
+    const billRef = doc(collection(db, 'bills'));
+    batch.set(billRef, bill);
+
+    bill.items.forEach(item => {
+      if (item.productId) {
+        const productRef = doc(db, 'products', item.productId);
+        batch.update(productRef, { stock: increment(-item.quantity) });
+      }
     });
+
+    await batch.commit();
     addLogEntry(`Created bill for ${bill.patientName} (Total: ₹${bill.grandTotal.toFixed(2)})`);
   };
 
   const handleUpdateBill = async (updatedBill: Bill) => {
-    update('bills', list => list.map(b => b.id === updatedBill.id ? updatedBill : b));
+    const { id, ...data } = updatedBill;
+    await updateDoc(doc(db, 'bills', id), data);
     addLogEntry(`Updated bill ${updatedBill.id}`);
   };
 
   const handleAddMoneyTransaction = async (tx: Omit<MoneyTransaction, 'id'>) => {
-    const newTx: MoneyTransaction = { ...tx, id: newId('MTX') };
-    update('moneyTransactions', list => [...list, newTx]);
+    await addDoc(collection(db, 'moneyTransactions'), tx);
     addLogEntry(`${tx.category} of ₹${tx.amount.toFixed(2)} in ${tx.type}`);
   };
 
   const handleUpdateMoneyTransaction = async (updatedTx: MoneyTransaction) => {
-    update('moneyTransactions', list => list.map(t => t.id === updatedTx.id ? updatedTx : t));
+    const { id, ...data } = updatedTx;
+    await updateDoc(doc(db, 'moneyTransactions', id), data);
     addLogEntry(`Updated ${updatedTx.category} entry ${updatedTx.id}`);
   };
 
   const handleDeleteMoneyTransaction = async (txId: string) => {
-    update('moneyTransactions', list => list.filter(t => t.id !== txId));
+    await deleteDoc(doc(db, 'moneyTransactions', txId));
     addLogEntry(`Deleted money transaction ${txId}`);
   };
 
   const handleTransfer = async (from: 'Stock' | 'Bank' | 'Savings', to: 'Stock' | 'Bank' | 'Savings', amount: number) => {
     const ts = new Date().toISOString();
-    const out: MoneyTransaction = {
-      id: newId('MTX'), date: ts, amount: -amount, type: from, category: 'Transfer', description: `Transfer to ${to}`,
-    };
-    const inn: MoneyTransaction = {
-      id: newId('MTX'), date: ts, amount, type: to, category: 'Transfer', description: `Transfer from ${from}`,
-    };
-    update('moneyTransactions', list => [...list, out, inn]);
+    const batch = writeBatch(db);
+    const txFromRef = doc(collection(db, 'moneyTransactions'));
+    const txToRef = doc(collection(db, 'moneyTransactions'));
+
+    batch.set(txFromRef, { date: ts, amount: -amount, type: from, category: 'Transfer', description: `Transfer to ${to}` });
+    batch.set(txToRef, { date: ts, amount, type: to, category: 'Transfer', description: `Transfer from ${from}` });
+
+    await batch.commit();
     addLogEntry(`Transferred ₹${amount} from ${from} to ${to}`);
   };
 
   const stockAmount = useMemo(() => {
-    const totalSaleCash = data.sales.reduce((sum, s) => sum + s.cash, 0);
-    const manualAdjustments = data.moneyTransactions.filter(t => t.type === 'Stock').reduce((sum, t) => sum + t.amount, 0);
-    const purchasePaymentsFromStock = data.purchases.reduce((sum, p) =>
-      sum + p.paymentHistory.filter(pay => pay.source === 'Stock').reduce((s, pay) => s + pay.amount, 0), 0);
+    const totalSaleCash = sales.reduce((sum, sale) => sum + sale.cash, 0);
+    const manualAdjustments = moneyTransactions.filter(t => t.type === 'Stock').reduce((sum, t) => sum + t.amount, 0);
+    const purchasePaymentsFromStock = purchases.reduce((sum, purchase) =>
+      sum + purchase.paymentHistory.filter(pay => pay.source === 'Stock').reduce((paySum, pay) => paySum + pay.amount, 0), 0);
     return totalSaleCash + manualAdjustments - purchasePaymentsFromStock;
-  }, [data.sales, data.moneyTransactions, data.purchases]);
+  }, [sales, moneyTransactions, purchases]);
 
   const savingsBalance = useMemo(() => {
-    const totalSaleSavings = data.sales.reduce((sum, s) => sum + s.savings, 0);
-    const manualAdjustments = data.moneyTransactions.filter(t => t.type === 'Savings').reduce((sum, t) => sum + t.amount, 0);
-    const purchasePaymentsFromSavings = data.purchases.reduce((sum, p) =>
-      sum + p.paymentHistory.filter(pay => pay.source === 'Savings').reduce((s, pay) => s + pay.amount, 0), 0);
+    const totalSaleSavings = sales.reduce((sum, sale) => sum + sale.savings, 0);
+    const manualAdjustments = moneyTransactions.filter(t => t.type === 'Savings').reduce((sum, t) => sum + t.amount, 0);
+    const purchasePaymentsFromSavings = purchases.reduce((sum, purchase) =>
+      sum + purchase.paymentHistory.filter(pay => pay.source === 'Savings').reduce((paySum, pay) => paySum + pay.amount, 0), 0);
     return totalSaleSavings + manualAdjustments - purchasePaymentsFromSavings;
-  }, [data.sales, data.moneyTransactions, data.purchases]);
+  }, [sales, moneyTransactions, purchases]);
 
   const bankBalance = useMemo(() => {
-    const totalBankFromSales = data.sales.reduce((sum, s) => sum + s.bank, 0);
-    const totalBankFromBills = data.bills.reduce((sum, b) => sum + b.grandTotal, 0);
-    const manualAdjustments = data.moneyTransactions.filter(t => t.type === 'Bank').reduce((sum, t) => sum + t.amount, 0);
-    const purchasePaymentsFromBank = data.purchases.reduce((sum, p) =>
-      sum + p.paymentHistory.filter(pay => pay.source === 'Bank').reduce((s, pay) => s + pay.amount, 0), 0);
+    const totalBankFromSales = sales.reduce((sum, sale) => sum + sale.bank, 0);
+    const totalBankFromBills = bills.reduce((sum, bill) => sum + bill.grandTotal, 0);
+    const manualAdjustments = moneyTransactions.filter(t => t.type === 'Bank').reduce((sum, t) => sum + t.amount, 0);
+    const purchasePaymentsFromBank = purchases.reduce((sum, purchase) =>
+      sum + purchase.paymentHistory.filter(pay => pay.source === 'Bank').reduce((paySum, pay) => paySum + pay.amount, 0), 0);
     return totalBankFromSales + totalBankFromBills + manualAdjustments - purchasePaymentsFromBank;
-  }, [data.sales, data.bills, data.moneyTransactions, data.purchases]);
-
-  const handleStoragePathChanged = useCallback(async (_newPath: string) => {
-    const loaded = await electron().loadData();
-    if (loaded && !(loaded as { __error?: string }).__error) {
-      const next = (loaded as AppData | null) ?? emptyData();
-      if (!next.users || next.users.length === 0) {
-        next.users = data.users.length ? data.users : [{ id: newId('USER'), name: 'thalif', password: 'thalif' }];
-      }
-      setData({ ...emptyData(), ...next });
-    }
-  }, [data.users]);
-
-  if (phase === 'checkingPath' || phase === 'loading') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-medium">{phase === 'loading' ? 'Loading data…' : 'Starting up…'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'error') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-xl shadow border border-red-200 p-6 max-w-lg">
-          <h2 className="text-xl font-bold text-red-700 mb-2">Something went wrong</h2>
-          <p className="text-gray-700 text-sm mb-4">{errorMsg}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'needsSetup') {
-    return <SetupWizard onComplete={() => bootstrap()} />;
-  }
-
-  const { customers, products, sales, purchases, suppliers, users, historyLog, bills, moneyTransactions } = data;
+  }, [sales, bills, moneyTransactions, purchases]);
 
   const renderContent = () => {
     switch (activeView) {
@@ -484,14 +410,29 @@ const App = () => {
       case 'history':
         return <HistoryLog logs={historyLog} />;
       case 'settings':
-        return <Settings data={data} onStoragePathChanged={handleStoragePathChanged} />;
+        return <Settings data={data} />;
       default:
         return <Dashboard sales={sales} bills={bills} customers={customers} products={products} purchases={purchases} />;
     }
   };
 
+  if (!setupDone) {
+    return <SetupWizard onComplete={completeSetup} />;
+  }
+
   if (!currentUser) {
     return <Login onLogin={handleLogin} error={loginError} />;
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading data…</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -522,8 +463,6 @@ const App = () => {
             suppliers={suppliers}
             bills={bills}
           />
-
-          <UpdateBanner />
         </main>
       </div>
 
@@ -536,8 +475,7 @@ const App = () => {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-1">Hello, {currentUser.name}!</h2>
-            <p className="text-gray-600 mb-1">You are logged in.</p>
-            {appVersion && <p className="text-xs text-gray-400 mb-5">Hajara Medicals v{appVersion}</p>}
+            <p className="text-gray-600 mb-5">You are logged in.</p>
             <button
               onClick={() => setShowWelcome(false)}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"

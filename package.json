@@ -4,24 +4,18 @@
   "private": true,
   "version": "1.0.2",
   "description": "Hajara Medicals — Billing & Inventory desktop app",
-  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
-    "dev:web": "vite",
-    "dev": "concurrently -k -n VITE,ELECTRON -c blue,magenta \"vite\" \"wait-on http://localhost:3000 && electron .\"",
-    "build:web": "vite build",
-    "package": "node scripts/make-package.cjs",
-    "installer": "node scripts/make-installer.cjs",
-    "build": "npm run build:web && npm run package && npm run installer",
-    "release:upload": "node scripts/make-release.cjs",
-    "release": "npm run build && node scripts/make-release.cjs",
+    "dev": "vite",
+    "build": "vite build",
     "preview": "vite preview",
-    "start": "electron ."
+    "dev:electron": "concurrently -k -n VITE,ELECTRON -c blue,magenta \"vite\" \"wait-on http://localhost:3000 && electron .\"",
+    "package": "node scripts/make-package.cjs",
+    "installer": "node scripts/make-installer.cjs"
   },
   "dependencies": {
     "@google/genai": "^1.20.0",
-    "electron-log": "^5.4.3",
-    "electron-updater": "^6.8.3",
+    "firebase": "^12.11.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"

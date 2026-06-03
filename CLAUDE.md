@@ -14,17 +14,23 @@ Hajara Medicals: Billing & Inventory — a React single-page application for man
 
 No test runner, linter, or formatter is configured.
 
+It is a **web app** (deployable to Vercel/any static host). It was briefly an Electron desktop app; the `electron/`, `scripts/`, `installer.nsi`, and `components/UpdateBanner.tsx` files are leftover from that and are no longer wired into the web build.
+
 ## Environment
 
 Set `GEMINI_API_KEY` in `.env.local` for the AI chatbot (Google Gemini). Vite exposes it as `process.env.GEMINI_API_KEY` and `process.env.API_KEY`.
+
+Firebase config lives in `firebase.ts` (web apiKey — not a secret). Data lives in Cloud Firestore; access is governed by Firestore security rules.
 
 ## Architecture
 
 ### State & Data Flow
 
-All application state lives in `App.tsx` as top-level `useState` hooks. There is no backend, database, or persistent storage — data initializes from `data/mockData.ts` and is lost on refresh.
+**Cloud Firestore is the source of truth.** `App.tsx` subscribes to one collection per entity via the `useCollection<T>(name)` hook (`hooks/useFirestore.ts`), which is a real-time `onSnapshot` listener — changes from any device/tab/console appear automatically. Collections: `customers`, `products`, `sales`, `purchases`, `suppliers`, `users`, `historyLog`, `bills`, `moneyTransactions`.
 
-`App.tsx` is the single source of truth. It defines CRUD handlers for every entity (customers, products, sales, purchases, bills, suppliers, users, money transactions) and passes them as props to child components. Every mutation also calls `addLogEntry()` to create an audit trail.
+`App.tsx` defines CRUD handlers for every entity that write to Firestore (`addDoc`/`updateDoc`/`deleteDoc`, and `writeBatch` + `increment` for stock-affecting purchases/bills/transfers) and passes them as props to child components. Every mutation also calls `addLogEntry()` to write an audit entry to the `historyLog` collection.
+
+**Local-folder mirror (optional, Chrome/Edge only):** `lib/localMirror.ts` uses the File System Access API to write a `hajara-data.json` backup into a user-picked folder on every change. The folder handle is persisted in IndexedDB. `lib/storage.ts` defines the `AppData` snapshot shape assembled from the live collections for mirroring/export. First-run folder choice is in `components/SetupWizard.tsx` (gated by the `hajara_setup_done` localStorage flag); folder management + Excel/JSON export is in `components/Settings.tsx`.
 
 ### Routing
 
@@ -44,7 +50,7 @@ Payment sources map: Cash → Stock, Bank Transfer → Bank, Savings → Savings
 
 ### ID Generation
 
-All entity IDs use the pattern `PREFIX-${Date.now()}` (e.g., `CUST-1711234567890`, `PUR-1711234567890`).
+Entity document IDs are Firestore auto-generated (via `addDoc`) and merged into objects as `id` by `useCollection`. Only sub-record IDs that live inside a document (e.g. `PaymentRecord` in a purchase's `paymentHistory`) still use the `PREFIX-${Date.now()}` pattern.
 
 ### Component Patterns
 
