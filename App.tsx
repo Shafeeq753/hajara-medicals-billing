@@ -4,7 +4,7 @@ import { db } from './firebase';
 import { useCollection } from './hooks/useFirestore';
 import { Customer, Product, Sale, Purchase, Supplier, User, LogEntry, View, PaymentRecord, Bill, CustomerMedicine, MoneyTransaction } from './types';
 import { AppData } from './lib/storage';
-import { reconnectMirrorFolder, writeMirror } from './lib/localMirror';
+import { getMirrorStatus, reconnectMirrorFolder, writeMirror } from './lib/localMirror';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Sales from './components/Sales';
@@ -57,6 +57,11 @@ const App = () => {
 
   const [isChatOpen, setIsChatOpen] = useState(false);
 
+  // Local-backup permission state: shows a "resume" banner if a folder was
+  // chosen but the browser dropped write permission (e.g. after a restart).
+  const [mirrorPaused, setMirrorPaused] = useState(false);
+  const [mirrorDismissed, setMirrorDismissed] = useState(false);
+
   const dataLoading =
     customersLoading || productsLoading || salesLoading || purchasesLoading ||
     suppliersLoading || usersLoading || billsLoading;
@@ -66,17 +71,30 @@ const App = () => {
     customers, products, sales, purchases, suppliers, users, historyLog, bills, moneyTransactions,
   }), [customers, products, sales, purchases, suppliers, users, historyLog, bills, moneyTransactions]);
 
-  // Re-attach to a previously chosen backup folder after a reload (no prompt).
-  useEffect(() => {
-    reconnectMirrorFolder(false).catch(() => {});
-  }, []);
-
-  // Mirror every change to the local backup file (debounced). No-ops if no folder.
+  // Mirror every change to the local backup file (debounced). If a folder was
+  // chosen but write permission lapsed, surface the "resume" banner instead.
   useEffect(() => {
     if (dataLoading) return;
-    const t = setTimeout(() => { writeMirror(data).catch(() => {}); }, 600);
+    const t = setTimeout(async () => {
+      const st = await getMirrorStatus();
+      if (st.granted) {
+        setMirrorPaused(false);
+        await writeMirror(data).catch(() => {});
+      } else if (st.hasFolder) {
+        setMirrorPaused(true);
+      }
+    }, 600);
     return () => clearTimeout(t);
   }, [data, dataLoading]);
+
+  const handleResumeBackup = async () => {
+    // requestPermission needs a user gesture — this runs from the button click.
+    const name = await reconnectMirrorFolder(true).catch(() => null);
+    if (name) {
+      setMirrorPaused(false);
+      await writeMirror(data).catch(() => {});
+    }
+  };
 
   // Seed default user if the Firestore users collection is empty.
   useEffect(() => {
@@ -440,6 +458,29 @@ const App = () => {
       <div className="md:flex">
         <Header activeView={activeView} setActiveView={setActiveView} currentUser={currentUser} onLogout={handleLogout} />
         <main className="flex-1 p-4 md:p-6 lg:p-8 relative">
+          {mirrorPaused && !mirrorDismissed && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3">
+              <span className="text-sm font-medium">
+                ⚠️ Local backup is paused — the browser needs permission to write to your folder again. (Your cloud data is unaffected.)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleResumeBackup}
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold py-1.5 px-3 rounded-lg"
+                >
+                  Resume Backup
+                </button>
+                <button
+                  onClick={() => setMirrorDismissed(true)}
+                  className="text-amber-700 hover:text-amber-900 text-sm font-medium py-1.5 px-2"
+                  title="Hide until next time"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           {renderContent()}
 
           <button

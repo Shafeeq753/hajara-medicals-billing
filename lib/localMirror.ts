@@ -122,6 +122,28 @@ export async function hasMirrorFolder(): Promise<boolean> {
   return (await idbGet<DirHandle>(IDB_KEY)) !== undefined;
 }
 
+export interface MirrorStatus {
+  hasFolder: boolean; // a folder was chosen at some point
+  name: string | null;
+  granted: boolean;   // we currently have write permission (no prompt needed)
+}
+
+/**
+ * Report the saved folder + whether we currently hold write permission.
+ * Never prompts — safe to call on load. Use `reconnectMirrorFolder(true)` to
+ * re-grant when `hasFolder && !granted`.
+ */
+export async function getMirrorStatus(): Promise<MirrorStatus> {
+  if (!isFsAccessSupported()) return { hasFolder: false, name: null, granted: false };
+  const handle = await idbGet<DirHandle>(IDB_KEY);
+  if (!handle) return { hasFolder: false, name: null, granted: false };
+  let granted = false;
+  try {
+    granted = (await handle.queryPermission({ mode: 'readwrite' })) === 'granted';
+  } catch { /* ignore */ }
+  return { hasFolder: true, name: handle.name ?? 'selected folder', granted };
+}
+
 /**
  * Write the given data object as pretty JSON into hajara-data.json in the
  * remembered folder. Silently no-ops if no folder / no permission.

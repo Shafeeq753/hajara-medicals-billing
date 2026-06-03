@@ -50,8 +50,13 @@ const Settings: React.FC<Props> = ({ data }) => {
   const handleBackupNow = async () => {
     setBusy(true);
     try {
+      // Re-grant permission if the browser dropped it (prompts on this click).
+      const name = await reconnectMirrorFolder(true);
+      if (name) setFolderName(name);
       const ok = await writeMirror(data);
-      flash(ok ? 'ok' : 'err', ok ? 'Backup written to your folder.' : 'Could not write — re-select the folder to grant permission.');
+      flash(ok ? 'ok' : 'err', ok ? 'Backup written to your folder.' : 'Permission denied — try "Change Folder" to pick it again.');
+    } catch (err) {
+      flash('err', String(err instanceof Error ? err.message : err));
     } finally {
       setBusy(false);
     }
